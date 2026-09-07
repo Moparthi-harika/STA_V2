@@ -72,7 +72,7 @@ export async function fetchIPScan(ip) {
 
 export async function fetchReportsGeo() {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/reports/geo`);
+    const res = await fetchWithTimeout(`${BASE_URL}/reports/geo`); // countries and isps
     if (!res.ok) throw new Error(`Failed to fetch reports geo: ${res.status}`);
     const json = await res.json();
     return json;
@@ -96,7 +96,8 @@ export async function fetchReportsDetails(type, value) {
 
 export async function triggerExport(type, value) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/export/${type}?value=${encodeURIComponent(value)}`);
+    const url = `${BASE_URL}/export/${type}?value=${encodeURIComponent(value)}`; // job id
+    const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error(`Failed to trigger export: ${res.status}`);
     const json = await res.json();
     return json.data.job_id;
@@ -108,7 +109,7 @@ export async function triggerExport(type, value) {
 
 export async function pollExportStatus(jobId) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/export/status/${jobId}`);
+    const res = await fetchWithTimeout(`${BASE_URL}/export/status/${jobId}`);  // filename,status,total ips
     if (!res.ok) throw new Error(`Failed to poll export status: ${res.status}`);
     const json = await res.json();
     return json.data;
@@ -120,7 +121,7 @@ export async function pollExportStatus(jobId) {
 
 export async function downloadExport(jobId, filename) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/export/download/${jobId}`, { timeout: 60000 });
+    const res = await fetchWithTimeout(`${BASE_URL}/export/download/${jobId}`, { timeout: 60000 }); // pdf
     if (!res.ok) throw new Error(`Failed to download export: ${res.status}`);
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);

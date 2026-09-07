@@ -31,6 +31,12 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+#login-username:-webkit-autofill,
+#login-password:-webkit-autofill {
+  -webkit-text-fill-color: hsl(var(--foreground));
+  font-weight: 700;
+}
+
 .bg-card {
   background-color: hsl(var(--card));
   border-color: hsl(var(--border));

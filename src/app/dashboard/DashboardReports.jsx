@@ -20,6 +20,7 @@ DashboardReports.propTypes = {
   pcapId: PropTypes.string,
   customFetchGeo: PropTypes.func,
   customFetchDetails: PropTypes.func,
+  customTriggerExport: PropTypes.func,
   session: PropTypes.object,
 };
 
@@ -28,6 +29,7 @@ export function DashboardReports({
   pcapId = null,
   customFetchGeo = null,
   customFetchDetails = null,
+  customTriggerExport = null,
   session
 }) {
   const [geoData, setGeoData] = useState({ countries: [], cities: [], isps: [] });
@@ -150,8 +152,12 @@ export function DashboardReports({
     if (!selectedItem || isGeneratingPdf) return;
     setIsGeneratingPdf(true);
     try {
-      // Step 1 — trigger
-      const jobId = await triggerExport(discoveryMode, selectedItem.name);
+      // Step 1 — trigger export. Use pcap-scoped export endpoint when viewing a PCAP's
+      // reports so only the IPs belonging to that PCAP are exported, otherwise fall back
+      // to the dashboard-wide export endpoint.
+      const jobId = pcapId && customTriggerExport
+        ? await customTriggerExport(pcapId, discoveryMode, selectedItem.name)
+        : await triggerExport(discoveryMode, selectedItem.name);
 
       // Step 2 — poll every 1.5s, max 60s
       const deadline = Date.now() + 60000;
@@ -391,7 +397,7 @@ export function DashboardReports({
               <div className="flex-1 relative">
                 <WorldMapLeaflet 
                   externalIps={detailsData} 
-                  mode="reports"
+                  mode="pcap"
                   onIpClick={(ip) => {
                     handleIpSelect(ip);
                     setIsMapOpen(false);

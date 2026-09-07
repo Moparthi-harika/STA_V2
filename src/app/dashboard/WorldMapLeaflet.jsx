@@ -392,14 +392,14 @@ const getSummaryMarkerSize = () => SUMMARY_MARKER_SIZE;
 
 // Continent-level labels only.
 const CONTINENT_LABELS = [
-  { id: 'north-america', text: 'NORTH\nAMERICA', position: [48, -105], className: 'label-large' },
-  { id: 'europe', text: 'EUROPE', position: [53, 15], className: 'label-large' },
+  { id: 'north-america', text: 'North\nAmerica', position: [48, -105], className: 'label-large' },
+  { id: 'europe', text: 'Europe', position: [53, 15], className: 'label-large' },
   // { id: 'russia', text: 'RUSSIA', position: [61, 95], className: 'label-large' },
-  { id: 'africa', text: 'AFRICA', position: [5, 18], className: 'label-large' },
-  { id: 'asia', text: 'ASIA', position: [42, 78], className: 'label-large' },
-  { id: 'south-america', text: 'SOUTH AMERICA', position: [-14, -65], className: 'label-large' },
-  { id: 'australia', text: 'AUSTRALIA', position: [-25, 133], className: 'label-large' },
-  { id: 'antarctica', text: 'ANTARCTICA', position: [-80, 0], className: 'label-large' },
+  { id: 'africa', text: 'Africa', position: [5, 18], className: 'label-large' },
+  { id: 'asia', text: 'Asia', position: [42, 78], className: 'label-large' },
+  { id: 'south-america', text: 'South America', position: [-14, -65], className: 'label-large' },
+  { id: 'australia', text: 'Australia', position: [-25, 133], className: 'label-large' },
+  { id: 'antarctica', text: 'Antarctica', position: [-80, 0], className: 'label-large' },
 ];
 
 const getPcapMarkerSize = (count, zoomLevel) => {

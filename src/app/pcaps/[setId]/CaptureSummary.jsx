@@ -277,8 +277,8 @@ export default function CaptureSummary({
         </div>
       </div>
 
-
-      <div className="bg-card shadow-sm p-8 h-96 flex flex-col transition-colors">
+      {/* Session TimeLine  */}
+        <div className="bg-card shadow-sm border border-theme rounded-xl p-8 h-96 flex flex-col transition-colors">
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-3">
             <h3 className="font-sans font-semibold  text-foreground">PCAP Session Timeline</h3>
@@ -344,7 +344,9 @@ export default function CaptureSummary({
       </div>
 
 
-      <div className="bg-card shadow-sm overflow-hidden flex flex-col transition-colors">
+      {/* Connections Table  */}
+      
+        <div className="bg-card shadow-sm border border-theme rounded-xl overflow-hidden flex flex-col transition-colors">
         <div className="px-8 py-5 border-b border-theme bg-slate-500/[0.02] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="inline-flex items-center px-4 py-2 bg-emerald-500/8 border border-emerald-500/20 rounded-none">

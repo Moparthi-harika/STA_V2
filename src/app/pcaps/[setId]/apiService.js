@@ -141,6 +141,20 @@ export async function fetchPcapGeoReport(pcapId) {
 }
 
 
+export async function triggerPcapExport(pcapId, type, value) {
+  try {
+    const url = `${BASE_URL}/reports/${pcapId}/${type}/${encodeURIComponent(value)}/export`; // job id
+    const res = await fetchWithTimeout(url);
+    if (!res.ok) throw new Error(`Failed to trigger pcap export: ${res.status}`);
+    const json = await res.json();
+    return json.data.job_id;
+  } catch (error) {
+    console.error(`[apiService] triggerPcapExport for ${pcapId}/${type}/${value}:`, error);
+    throw error;
+  }
+}
+
+
 export async function fetchPcapDetails(pcapId, type, value) {
   try {
     const res = await fetchWithTimeout(`${BASE_URL}/reports/${pcapId}/${type}/${encodeURIComponent(value)}`);

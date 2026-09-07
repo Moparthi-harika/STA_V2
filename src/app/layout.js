@@ -26,7 +26,7 @@ export default async function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${openSans.className} font-serif antialiased min-h-screen flex flex-col bg-gray-50 text-gray-900`}
+        className={`${openSans.className} antialiased min-h-screen flex flex-col bg-gray-50 text-gray-900`}
       >
         <AuthSessionProvider>
           <ThemeProvider>
