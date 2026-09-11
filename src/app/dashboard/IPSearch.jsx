@@ -71,8 +71,8 @@ export function IPSearch({ initialIp, onScanComplete }) {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex justify-center mb-6">
-        <form onSubmit={(e) => handleSearch(e)} className="relative w-full max-w-xl group">
+      <div className="mx-6 flex justify-center mb-6">
+        <form onSubmit={(e) => handleSearch(e)} className="relative w-full max-w-2xl group">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2  group-focus-within:text-blue-500 transition-colors" />
           <input
             type="text"
@@ -99,7 +99,7 @@ export function IPSearch({ initialIp, onScanComplete }) {
         </form>
       </div>
 
-      <div className="flex flex-wrap items-center justify-center gap-2 -mt-2 mb-8 min-h-[24px]">
+      <div className="mx-6 flex flex-wrap items-center justify-center gap-2 -mt-2 mb-8 min-h-[24px]">
         <Clock size={13} className="" />
         <span className="text-[14px]    mr-2">Recent:</span>
         {history.length > 0 ? (
@@ -149,7 +149,7 @@ export function IPSearch({ initialIp, onScanComplete }) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-8 pb-20"
+            className="mx-6 space-y-8 pb-20"
           >
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

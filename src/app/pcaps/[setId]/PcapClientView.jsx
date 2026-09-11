@@ -626,6 +626,8 @@ export default function PcapClientView({ setId, initialResponse, session }) {
 
   return (
     <div className="flex flex-col gap-3 pb-10">
+      {!selectedFile && (
+        <>
       <div className="flex items-center justify-between shrink-0 pt-1 ">
        <h1 className="text-[22px] font-bold tracking-tight font-sans text-foreground flex items-center gap-3 ml-6">
           PCAP Set {setId}
@@ -832,6 +834,9 @@ export default function PcapClientView({ setId, initialResponse, session }) {
         )}
       </div>
 
+        </>
+      )}
+
       <AnimatePresence>
         {selectedFile && (
           <motion.div
@@ -839,82 +844,99 @@ export default function PcapClientView({ setId, initialResponse, session }) {
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed inset-0 top-[120px] z-[40] bg-background flex flex-col"
+            className="w-full min-w-0 bg-background"
           >
-            <div className="flex-1 flex flex-col w-full bg-card border-t border-theme overflow-hidden">
-              <div className="flex items-center gap-0 bg-emerald-100 dark:bg-[#18243f] border-b border-theme shrink-0">
-                <div className="flex-1 flex items-center gap-0">
+            <div className="w-full overflow-hidden">
+              <div className="mx-6 mt-4 flex items-center overflow-visible rounded-2xl border border-blue-400/40 bg-slate-50 shadow-[0_0_0_1px_rgba(59,130,246,0.06),0_0_25px_rgba(59,130,246,0.10)] dark:border-blue-400/25 dark:bg-slate-900 dark:shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_0_30px_rgba(59,130,246,0.12)]">
+                <div className="flex min-w-0 flex-1 items-center overflow-visible">
                   {TABS.map((tab) => {
-                    if (tab.id === "Reports") {
-                      return (
-                        <div key={tab.id} className="flex-1 relative group">
-                          <button
-                            onClick={() => {
-                              handleTabChange("Reports");
-                              setReportInitialMode("country");
-                            }}
-                            className={`w-full whitespace-nowrap px-4 py-4 font-sans dark:text-slate-400  transition-all text-center border-r border-theme relative group flex items-center justify-center gap-2 ${
-                              activeTab === "Reports"
-                                ? "text-blue-600 bg-blue-500/10"
-                                : "text-slate-800 hover:text-foreground hover:bg-slate-500/5"
-                            }`}
-                          >
-                            <tab.icon
-                              size={14}
-                              className={
-                                activeTab === "Reports"
-                                  ? "text-blue-600"
-                                  : "text-slate-800 dark:text-slate-400"
-                              }
-                            />
-                            {tab.id}
-                            <ChevronDown
-                              size={14}
-                              className={
-                                activeTab === "Reports"
-                                  ? "text-blue-600 opacity-70"
-                                  : "opacity-100"
-                              }
-                            />
-                            {activeTab === "Reports" && (
-                              <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500/20" />
-                            )}
-                          </button>
+                   if (tab.id === "Reports") {
+  return (
+    <div key={tab.id} className="flex-1 relative group">
+      <button
+        onClick={() => {
+          handleTabChange("Reports");
+          setReportInitialMode("country");
+        }}
+        className={`relative flex w-full h-14 items-center justify-center gap-2.5 px-4 text-[15px] font-semibold transition-all duration-200 border-r border-blue-200/40 dark:border-blue-400/15 ${
+          activeTab === "Reports"
+            ? "text-blue-600 dark:text-blue-400"
+            : "text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+        }`}
+      >
+        <tab.icon
+          size={16}
+          strokeWidth={2}
+          className={`transition-all duration-200 ${
+            activeTab === "Reports"
+              ? "text-blue-500 drop-shadow-[0_0_7px_rgba(59,130,246,0.7)]"
+              : "text-slate-400 dark:text-slate-500"
+          }`}
+        />
 
-                          {/* Discovery Mode Dropdown */}
-                          <div className="absolute top-full left-0 w-full bg-card  border  border-theme shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-[60]">
-                            <button
-                              onClick={() => {
-                                handleTabChange("Reports");
-                                setReportInitialMode("country");
-                              }}
-                              className="w-full px-4 py-3 font-sans dark:text-slate-400 text-slate-800 hover:text-blue-600 hover:bg-slate-500/10 transition-all text-center border-b border-theme "
-                            >
-                              Country
-                            </button>
-                            <button
-                              onClick={() => {
-                                handleTabChange("Reports");
-                                ("Reports");
-                                setReportInitialMode("isp");
-                              }}
-                              className="w-full px-4 py-3 font-sans dark:text-slate-400  text-slate-800 hover:text-blue-600 hover:bg-slate-500/10 transition-all text-center "
-                            >
-                              ISP
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    }
+        <span>Reports</span>
+
+        <ChevronDown
+          size={14}
+          className={`transition-all duration-200 ${
+            activeTab === "Reports"
+              ? "text-blue-500"
+              : "text-blue-500/80 group-hover:text-blue-500 dark:text-blue-400/80 dark:group-hover:text-blue-400"
+          }`}
+        />
+
+        {activeTab === "Reports" && (
+          <div className="absolute bottom-0 left-6 right-6 h-[2px] rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+        )}
+      </button>
+
+      <div className="invisible absolute left-1/2 top-[calc(100%+8px)] z-50 w-[260px] -translate-x-1/2 translate-y-1 rounded-xl border border-blue-300/40 bg-white p-2 opacity-0 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 dark:border-blue-400/25 dark:bg-slate-900 dark:shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
+        <div className="px-3 pb-2 pt-1">
+          <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
+            Explore reports by
+          </p>
+        </div>
+
+        <button
+          onClick={() => {
+            handleTabChange("Reports");
+            setReportInitialMode("country");
+          }}
+          className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-all ${
+            reportInitialMode === "country"
+              ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+              : "text-slate-600 hover:bg-blue-500/5 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+          }`}
+        >
+          Countries
+        </button>
+
+        <button
+          onClick={() => {
+            handleTabChange("Reports");
+            setReportInitialMode("isp");
+          }}
+          className={`mt-1 flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-all ${
+            reportInitialMode === "isp"
+              ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+              : "text-slate-600 hover:bg-blue-500/5 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+          }`}
+        >
+          ISPs
+        </button>
+      </div>
+    </div>
+  );
+}
                     return (
                       <button
                         key={tab.id}
 
                         onClick={() => handleTabChange(tab.id)}
-                        className={`flex-1 whitespace-nowrap px-4 py-4  font-sans dark:text-slate-400  transition-all text-center border-r border-theme last:border-r-0 relative group flex items-center justify-center gap-2 ${
+                        className={`relative flex h-14 flex-1 items-center justify-center gap-2.5 whitespace-nowrap px-4 text-[15px] font-semibold font-sans transition-all duration-200 border-r border-blue-200/40 dark:border-blue-400/15 last:border-r-0 ${
                           activeTab === tab.id
-                            ? "text-blue-600 bg-blue-500/10"
-                            : "text-slate-800 hover:text-foreground hover:bg-slate-500/5"
+                            ? "text-blue-600 bg-blue-500/5 dark:text-blue-400"
+                            : "text-slate-700 hover:text-blue-600 hover:bg-blue-500/5 dark:text-slate-300 dark:hover:text-blue-400"
                         }`}
                       >
                         <tab.icon
@@ -927,7 +949,7 @@ export default function PcapClientView({ setId, initialResponse, session }) {
                         />
                         {tab.id}
                         {activeTab === tab.id && (
-                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500/20" />
+                          <div className="absolute bottom-0 left-6 right-6 h-[2px] rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
                         )}
                       </button>
                     );
@@ -937,7 +959,7 @@ export default function PcapClientView({ setId, initialResponse, session }) {
                 <button
                   // onClick={() => setSelectedPcapId(null)}
                   onClick={() => handleCardClick(selectedFile.pcap_id, true)}
-                  className="w-16 h-full flex items-center justify-center bg-rose-500/5 text-rose-500 hover:bg-rose-500 hover:text-white transition-all group shrink-0 border-l border-theme"
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-r-2xl border-l border-blue-200/40 bg-rose-500/5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white dark:border-blue-400/15"
                 >
                   <X
                     size={20}
@@ -946,23 +968,23 @@ export default function PcapClientView({ setId, initialResponse, session }) {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="h-full flex flex-col">
-                  <div className="px-8 py-4 border-b border-theme bg-card shrink-0 flex items-center">
- <div className="px-8 py-2.5 border-b border-theme bg-card shrink-0 flex flex-col gap-0.5">
-  <span className="font-sans text-[13px] font-semibold uppercase tracking-[0.15em] text-blue-600/70 dark:text-blue-400/70 leading-none">
-    PCAP Filename :
-  </span>
-  <span
-    className="font-sans text-[15px] font-semibold text-foreground truncate max-w-[min(100%,800px)]"
-    title={selectedFile.filename}
-  >
-    {selectedFile.filename}
-  </span>
-</div>
+              <div className="max-h-[calc(100vh-190px)] overflow-y-auto custom-scrollbar pb-6">
+                <div className="flex flex-col">
+                  <div className="mx-6 mt-4 mb-2 rounded-xl border border-blue-200/60 bg-slate-50 px-6 py-4 shadow-sm dark:border-blue-400/15 dark:bg-slate-900">
+                    <div className="flex flex-col gap-1">
+                      <span className="font-sans text-[11px] font-semibold  tracking-[0.16em] text-blue-600/70 dark:text-blue-400/70">
+                        PCAP Filename
+                      </span>
+                      <span
+                        className="font-sans text-[15px] font-semibold leading-6 text-foreground break-all"
+                        title={selectedFile.filename}
+                      >
+                        {selectedFile.filename}
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="flex-1 p-0">
+                  <div className="px-6 pt-2">
                     {isLoadingDetails ? (
                       <div className="p-8 space-y-8 animate-pulse">
                         <div className="grid grid-cols-3 gap-6">

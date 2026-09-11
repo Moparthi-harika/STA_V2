@@ -76,7 +76,7 @@ export function DashboardSummary({ data }) {
       <div className="rounded-2xl border border-theme bg-card shadow-sm p-5">
         <div className="flex items-center gap-2 mb-4">
           <span className="w-1 h-4 rounded-full bg-blue-500" />
-          <span className="text-[14px] font-bold  tracking-widest text-slate-400">Capture Summary</span>
+          <span className="text-[14px] font-bold  tracking-widest ">Capture Summary</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {kpis.map((kpi, index) => (

@@ -1,860 +1,1037 @@
-"use client";
+  "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { 
-  Globe, MapPin, Server, Activity, ArrowRight, Shield, 
+  import { useState, useEffect, useRef } from "react";
+  import { 
+    Globe, MapPin, Server, Activity, ArrowRight, Shield, 
+    
+    Search, ChevronRight, Loader2,
+    Database, Terminal,
+    CheckCircle2, User, Cpu, AlertTriangle, X, Zap
+  } from "lucide-react";
+  import { motion, AnimatePresence } from "framer-motion";
+  import { fetchReportsGeo, fetchReportsDetails, fetchIPScan, triggerExport, pollExportStatus, downloadExport } from "./dashboardApiService";
+  import { getCountryDisplayName, getCountryCode } from "@/constants/countryMapping";
+  import { WorldMapLeaflet } from "./WorldMapLeaflet";
+  import { compareIspNames,  getCountryFlagClass, getIspDisplayName, matchesCountrySearch, matchesIspSearch } from "./countryUtils";
+  import PropTypes from "prop-types";
+
+  DashboardReports.propTypes = {
+    initialMode: PropTypes.string,
+    pcapId: PropTypes.string,
+    customFetchGeo: PropTypes.func,
+    customFetchDetails: PropTypes.func,
+    customTriggerExport: PropTypes.func,
+    session: PropTypes.object,
+  };
+
+  export function DashboardReports({ 
+    initialMode = "country", 
+    pcapId = null,
+    customFetchGeo = null,
+    customFetchDetails = null,
+    customTriggerExport = null,
+    session
+  }) {
+    const [geoData, setGeoData] = useState({ countries: [], cities: [], isps: [] });
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [detailsData, setDetailsData] = useState([]);
+    const [selectedIp, setSelectedIp] = useState(null);
+    const [ipIntelligence, setIpIntelligence] = useState(null);
+    const detailsRef = useRef(null);
+    
+    const [isLoadingGeo, setIsLoadingGeo] = useState(true);
+    const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+    const [isLoadingIntel, setIsLoadingIntel] = useState(false);
+    const [error, setError] = useState(null);
   
-  Search, ChevronRight, Loader2,
-  Database, Terminal,
-  CheckCircle2, User, Cpu, AlertTriangle, X, Zap
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { fetchReportsGeo, fetchReportsDetails, fetchIPScan, triggerExport, pollExportStatus, downloadExport } from "./dashboardApiService";
-import { getCountryDisplayName, getCountryCode } from "@/constants/countryMapping";
-import { WorldMapLeaflet } from "./WorldMapLeaflet";
-import { compareIspNames,  getCountryFlagClass, getIspDisplayName, matchesCountrySearch, matchesIspSearch } from "./countryUtils";
-import PropTypes from "prop-types";
-
-DashboardReports.propTypes = {
-  initialMode: PropTypes.string,
-  pcapId: PropTypes.string,
-  customFetchGeo: PropTypes.func,
-  customFetchDetails: PropTypes.func,
-  customTriggerExport: PropTypes.func,
-  session: PropTypes.object,
-};
-
-export function DashboardReports({ 
-  initialMode = "country", 
-  pcapId = null,
-  customFetchGeo = null,
-  customFetchDetails = null,
-  customTriggerExport = null,
-  session
-}) {
-  const [geoData, setGeoData] = useState({ countries: [], cities: [], isps: [] });
-  const [selectedItem, setSelectedItem] = useState(null);
-  const [detailsData, setDetailsData] = useState([]);
-  const [selectedIp, setSelectedIp] = useState(null);
-  const [ipIntelligence, setIpIntelligence] = useState(null);
-  const detailsRef = useRef(null);
-  
-  const [isLoadingGeo, setIsLoadingGeo] = useState(true);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
-  const [isLoadingIntel, setIsLoadingIntel] = useState(false);
-  const [error, setError] = useState(null);
- 
-  const [isMapOpen, setIsMapOpen] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const discoveryMode = initialMode;
-  
+    const [isMapOpen, setIsMapOpen] = useState(false);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const discoveryMode = initialMode;
+    
 
 
-  useEffect(() => {
-    let isActive = true;
+    useEffect(() => {
+      let isActive = true;
 
-    queueMicrotask(() => {
-      if (!isActive) return;
+      queueMicrotask(() => {
+        if (!isActive) return;
 
-      setSelectedItem(null);
+        setSelectedItem(null);
+        setDetailsData([]);
+        setSelectedIp(null);
+        setIpIntelligence(null);
+        setCurrentPage(1);
+      });
+
+      return () => {
+        isActive = false;
+      };
+    }, [initialMode, pcapId]);
+
+    const pageSize = 12;
+
+    useEffect(() => {
+      const loadGeoData = async () => {
+        setIsLoadingGeo(true);
+        try {
+          const fetchFn = customFetchGeo || fetchReportsGeo;
+          const data = await fetchFn(pcapId);
+          if (data.success) {
+            setGeoData({
+              countries: data.data.countries || [],
+              cities: data.data.cities || [],
+              isps: data.data.isps || []
+            });
+          }
+        } catch (err) {
+          console.error("Failed to load geo data:", err);
+          setError("Intelligence server connection failed.");
+        } finally {
+          setIsLoadingGeo(false);
+        }
+      };
+      loadGeoData();
+    }, [pcapId, customFetchGeo]);
+
+      const handleItemSelect = async (item) => {
+      setSelectedItem(item);
       setDetailsData([]);
       setSelectedIp(null);
       setIpIntelligence(null);
       setCurrentPage(1);
-    });
+      setIsLoadingDetails(true);
+      setError(null);
 
-    return () => {
-      isActive = false;
-    };
-  }, [initialMode, pcapId]);
+      // Smooth scroll to details anchor
+      setTimeout(() => {
+        detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      }, 100);
 
-  const pageSize = 12;
-
-  useEffect(() => {
-    const loadGeoData = async () => {
-      setIsLoadingGeo(true);
       try {
-        const fetchFn = customFetchGeo || fetchReportsGeo;
-        const data = await fetchFn(pcapId);
-        if (data.success) {
-          setGeoData({
-            countries: data.data.countries || [],
-            cities: data.data.cities || [],
-            isps: data.data.isps || []
-          });
+        const fetchFn = customFetchDetails || fetchReportsDetails;
+        const data = pcapId 
+          ? await fetchFn(pcapId, discoveryMode, item.name)
+          : await fetchFn(discoveryMode, item.name);
+          
+        // Support both { data: [...] } and direct array responses
+        const results = data.data || (Array.isArray(data) ? data : []);
+        setDetailsData(results);
+        
+        if (results.length > 0) {
+          handleIpSelect(results[0].ip);
         }
       } catch (err) {
-        console.error("Failed to load geo data:", err);
-        setError("Intelligence server connection failed.");
+        console.error("Failed to load details:", err);
+        setError("Intelligence lookup failed. Please re-synchronize.");
       } finally {
-        setIsLoadingGeo(false);
+        setIsLoadingDetails(false);
       }
     };
-    loadGeoData();
-  }, [pcapId, customFetchGeo]);
 
-    const handleItemSelect = async (item) => {
-    setSelectedItem(item);
-    setDetailsData([]);
-    setSelectedIp(null);
-    setIpIntelligence(null);
-    setCurrentPage(1);
-    setIsLoadingDetails(true);
-    setError(null);
+    const handleIpSelect = async (ip) => {
+      setSelectedIp(ip);
+      setIsLoadingIntel(true);
+      setIpIntelligence(null);
 
-    // Smooth scroll to details anchor
-    setTimeout(() => {
-      detailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
-    }, 100);
-
-    try {
-      const fetchFn = customFetchDetails || fetchReportsDetails;
-      const data = pcapId 
-        ? await fetchFn(pcapId, discoveryMode, item.name)
-        : await fetchFn(discoveryMode, item.name);
-        
-      // Support both { data: [...] } and direct array responses
-      const results = data.data || (Array.isArray(data) ? data : []);
-      setDetailsData(results);
-      
-      if (results.length > 0) {
-        handleIpSelect(results[0].ip);
-      }
-    } catch (err) {
-      console.error("Failed to load details:", err);
-      setError("Intelligence lookup failed. Please re-synchronize.");
-    } finally {
-      setIsLoadingDetails(false);
-    }
-  };
-
-  const handleIpSelect = async (ip) => {
-    setSelectedIp(ip);
-    setIsLoadingIntel(true);
-    setIpIntelligence(null);
-
-    try {
-      const data = await fetchIPScan(ip);
-      if (data?.success) {
-        setIpIntelligence(data.data);
-      }
-    } catch (err) {
-      console.error("IP Intelligence fetch failed:", err);
-    } finally {
-      setIsLoadingIntel(false);
-    }
-  };
-
-  const handleDownloadReport = async () => {
-    if (!selectedItem || isGeneratingPdf) return;
-    setIsGeneratingPdf(true);
-    try {
-      // Step 1 — trigger export. Use pcap-scoped export endpoint when viewing a PCAP's
-      // reports so only the IPs belonging to that PCAP are exported, otherwise fall back
-      // to the dashboard-wide export endpoint.
-      const jobId = pcapId && customTriggerExport
-        ? await customTriggerExport(pcapId, discoveryMode, selectedItem.name)
-        : await triggerExport(discoveryMode, selectedItem.name);
-
-      // Step 2 — poll every 1.5s, max 60s
-      const deadline = Date.now() + 60000;
-      let filename = `${selectedItem.name}_report.pdf`;
-      while (Date.now() < deadline) {
-        await new Promise(r => setTimeout(r, 1500));
-        const status = await pollExportStatus(jobId);
-        if (status.status === 'done') {
-          filename = status.filename || filename;
-          break;
+      try {
+        const data = await fetchIPScan(ip);
+        if (data?.success) {
+          setIpIntelligence(data.data);
         }
-        if (status.status === 'failed') throw new Error(status.error || 'PDF generation failed');
+      } catch (err) {
+        console.error("IP Intelligence fetch failed:", err);
+      } finally {
+        setIsLoadingIntel(false);
       }
+    };
 
-      // Step 3 — download
-      await downloadExport(jobId, filename);
-      setShowPasswordModal(true);
-    } catch (err) {
-      console.error('Export failed:', err);
-    } finally {
-      setIsGeneratingPdf(false);
+    const handleDownloadReport = async () => {
+      if (!selectedItem || isGeneratingPdf) return;
+      setIsGeneratingPdf(true);
+      try {
+        // Step 1 — trigger export. Use pcap-scoped export endpoint when viewing a PCAP's
+        // reports so only the IPs belonging to that PCAP are exported, otherwise fall back
+        // to the dashboard-wide export endpoint.
+        const jobId = pcapId && customTriggerExport
+          ? await customTriggerExport(pcapId, discoveryMode, selectedItem.name)
+          : await triggerExport(discoveryMode, selectedItem.name);
+
+        // Step 2 — poll every 1.5s, max 60s
+        const deadline = Date.now() + 60000;
+        let filename = `${selectedItem.name}_report.pdf`;
+        while (Date.now() < deadline) {
+          await new Promise(r => setTimeout(r, 1500));
+          const status = await pollExportStatus(jobId);
+          if (status.status === 'done') {
+            filename = status.filename || filename;
+            break;
+          }
+          if (status.status === 'failed') throw new Error(status.error || 'PDF generation failed');
+        }
+
+        // Step 3 — download
+        await downloadExport(jobId, filename);
+        setShowPasswordModal(true);
+      } catch (err) {
+        console.error('Export failed:', err);
+      } finally {
+        setIsGeneratingPdf(false);
+      }
+    };
+
+    if (isLoadingGeo) {
+      return (
+        <div className="flex flex-col items-center justify-center py-24 gap-4">
+          <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+          <p className="text-slate-500 font-black text-[11px] uppercase animate-pulse">Aggregating Global Intelligence...</p>
+        </div>
+      );
     }
-  };
 
-  if (isLoadingGeo) {
+    const sortedCountries = [...geoData.countries].sort((a, b) => {
+      const leftName = getCountryDisplayName(a.name);
+      const rightName = getCountryDisplayName(b.name);
+
+      return leftName.localeCompare(rightName, undefined, { sensitivity: "base" });
+    });
+    const totalPages = Math.ceil(detailsData.length / pageSize);
+    const paginatedIps = detailsData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const selectedCountryDisplayName = selectedItem && discoveryMode === "country"
+      ? getCountryDisplayName(selectedItem.name)
+      : selectedItem?.name;
+    const selectedCountryFlagClass = selectedItem && discoveryMode === "country"
+      ? getCountryFlagClass(selectedItem.name)
+      : null;
+    const selectedIspDisplayName = selectedItem && discoveryMode === "isp"
+      ? getIspDisplayName(selectedItem.name)
+      : selectedItem?.name;
+
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
-        <p className="text-slate-500 font-black text-[11px] uppercase animate-pulse">Aggregating Global Intelligence...</p>
-      </div>
-    );
-  }
+      <div className="space-y-6 pb-20 animate-in fade-in duration-700">
+        
+        {/* Discovery Header */}
+        <div className="px-10 pt-6">
+          <div className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                <Globe size={19} className="text-blue-500" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-semibold text-foreground">
+                    {discoveryMode === "country" ? "Countries" : "ISPs"}
+                  </h2>
+                  <span className="inline-flex min-w-10 items-center justify-center rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    {discoveryMode === "country" ? geoData.countries.length : geoData.isps.length}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  {discoveryMode === "country" ? "Geographic report coverage" : "Network provider report coverage"}
+                </p>
+              </div>
+            </div>
 
-  const sortedCountries = [...geoData.countries].sort((a, b) => {
-    const leftName = getCountryDisplayName(a.name);
-    const rightName = getCountryDisplayName(b.name);
-
-    return leftName.localeCompare(rightName, undefined, { sensitivity: "base" });
-  });
-  const totalPages = Math.ceil(detailsData.length / pageSize);
-  const paginatedIps = detailsData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-  const selectedCountryDisplayName = selectedItem && discoveryMode === "country"
-    ? getCountryDisplayName(selectedItem.name)
-    : selectedItem?.name;
-  const selectedCountryFlagClass = selectedItem && discoveryMode === "country"
-    ? getCountryFlagClass(selectedItem.name)
-    : null;
-  const selectedIspDisplayName = selectedItem && discoveryMode === "isp"
-    ? getIspDisplayName(selectedItem.name)
-    : selectedItem?.name;
-
-  return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-700">
-      
-      {/* Discovery Vector Status Header (Redundancy Removed) */}
-      <div className="flex items-center justify-between gap-4 px-10 pt-6">
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-3 px-6 py-3 bg-blue-500/10 border border-blue-500/20 rounded-none shadow-[0_0_20px_rgba(59,130,246,0.1)] backdrop-blur-sm"
-        >
-          <div className="relative">
-            <Globe size={16} className="text-blue-500 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+            <div className="relative w-full max-w-md">
+              <Search size={17} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder={`Search ${discoveryMode === "country" ? "countries" : "ISPs"}...`}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-10 pr-4 text-sm font-normal text-foreground shadow-sm outline-none transition-all placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/10 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600"
+              />
+            </div>
           </div>
-          <span className="text-[19px] font-black text-foreground/90 drop-shadow-sm">
-            {discoveryMode === "country" ? "Countries" : "ISP's"}
-          </span>
+
+          <div className="mt-5 border-b border-slate-200 dark:border-slate-700" />
+        </div>
+
+        {/* Country / ISP List */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-10 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
+        >
+          <div className="p-5">
+            <div className="grid grid-cols-1 gap-3 overflow-y-auto pr-1 custom-scrollbar sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 max-h-[330px]">
+              {(discoveryMode === "country" ? sortedCountries : [...geoData.isps].sort((a, b) => compareIspNames(a.name, b.name)))
+                .filter(item => discoveryMode === "country"
+                  ? matchesCountrySearch(item.name, searchQuery)
+                  : matchesIspSearch(item.name, searchQuery))
+                .map((item, idx) => {
+                  const isCountry = discoveryMode === "country";
+                  const flagClass = isCountry ? getCountryFlagClass(item.name) : null;
+                  const displayName = isCountry ? getCountryDisplayName(item.name) : getIspDisplayName(item.name);
+                  const isSelected = selectedItem?.name === item.name;
+
+                  return (
+                    <motion.button
+                      key={idx}
+                      whileHover={{ y: -1 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => handleItemSelect(item)}
+                      className={`group flex min-h-[62px] items-center rounded-lg border px-4 py-3 text-left transition-all duration-200 ${isSelected ? "border-blue-300 bg-blue-50/70 shadow-sm dark:border-blue-500/50 dark:bg-blue-500/10" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600 dark:hover:bg-slate-800/70"}`}
+                    >
+                      <div className="flex min-w-0 w-full items-center gap-3">
+                        {isCountry ? (
+                          flagClass ? (
+                            <span className={`${flagClass} shrink-0`} aria-hidden="true" />
+                          ) : (
+                            <Globe size={16} className="shrink-0 text-slate-400" />
+                          )
+                        ) : (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-50 dark:bg-slate-800">
+                            <Server size={15} className="text-slate-500 dark:text-slate-400" />
+                          </div>
+                        )}
+
+                        <span className={`min-w-0 flex-1 truncate text-sm font-medium transition-colors ${isSelected ? "text-blue-700 dark:text-blue-400" : "text-slate-700 group-hover:text-slate-900 dark:text-slate-300 dark:group-hover:text-white"}`}>
+                          {displayName}
+                        </span>
+
+                        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors ${isSelected ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600 dark:bg-slate-800 dark:text-slate-500 dark:group-hover:bg-slate-700 dark:group-hover:text-slate-300"}`}>
+                          <ChevronRight size={14} />
+                        </span>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+
+              {(discoveryMode === "country" ? sortedCountries : [...geoData.isps].sort((a, b) => compareIspNames(a.name, b.name)))
+                .filter(item => discoveryMode === "country"
+                  ? matchesCountrySearch(item.name, searchQuery)
+                  : matchesIspSearch(item.name, searchQuery))
+                .length === 0 && (
+                  <div className="col-span-full flex flex-col items-center justify-center py-14 text-center">
+                    <Search size={22} className="text-slate-300" />
+                    <p className="mt-3 text-sm font-medium text-slate-500">No {discoveryMode === "country" ? "countries" : "ISPs"} found</p>
+                    <p className="mt-1 text-xs text-slate-400">Try a different search term.</p>
+                  </div>
+                )}
+            </div>
+          </div>
         </motion.div>
 
-        <div className="flex-1 max-w-2xl relative group ml-auto">
-          <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none z-10">
-            <Search size={18} className="text-violet-500 transition-all duration-500" />
-          </div>
-          <input
-            type="text"
-            placeholder={`Search ${discoveryMode === 'country' ? 'Country' : 'ISP'}...`}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-violet-500/[0.05] border border-violet-500/20 px-14 py-4 text-[12px] font-medium focus:outline-none focus:border-violet-500 transition-all duration-500 placeholder:text-violet-400 placeholder:font-bold rounded-none shadow-sm"
-          />
-        </div>
-      </div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mx-10 bg-card/50 backdrop-blur-md border border-slate-500/20 rounded-none shadow-2xl shadow-slate-500/5 overflow-hidden"
-      >
-        <div className="p-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 max-h-[300px] overflow-y-auto pr-6 custom-scrollbar">
-            {(discoveryMode === "country" ? sortedCountries : [...geoData.isps].sort((a, b) => compareIspNames(a.name, b.name)))
-              .filter(item => discoveryMode === "country"
-                ? matchesCountrySearch(item.name, searchQuery)
-                : matchesIspSearch(item.name, searchQuery))
-              .map((item, idx) => {
-              const isCountry = discoveryMode === "country";
-              const flagClass = isCountry ? getCountryFlagClass(item.name) : null;
-              const displayName = isCountry ? getCountryDisplayName(item.name) : getIspDisplayName(item.name);
-              const accentClass = [
-                'bg-blue-500',
-                'bg-rose-500',
-                'bg-emerald-500',
-                'bg-amber-500',
-                'bg-indigo-500',
-                'bg-violet-500',
-                'bg-cyan-500'
-              ][idx % 7];
+        {/* Selected Country Context Bar */}
+        <AnimatePresence>
+          {selectedItem && (
+            <motion.div 
+              ref={detailsRef}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mx-10 flex items-center justify-between rounded-xl border border-slate-200 bg-white px-7 py-5 shadow-sm scroll-mt-20 dark:border-slate-700 dark:bg-slate-900"
+            >
+              <div className="flex min-w-0 items-center gap-4">
+                {selectedCountryFlagClass && (
+                  <span className={`${selectedCountryFlagClass} shrink-0`} aria-hidden="true" />
+                )}
+                <h3 className="text-2xl font-semibold text-foreground">{discoveryMode === "country" ? selectedCountryDisplayName : selectedIspDisplayName}</h3>
+              </div>
               
-              return (
-                <motion.button
-                  key={idx}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleItemSelect(item)}
-                  className={`relative text-left px-4 py-3.5 border group overflow-hidden transition-colors duration-300 ${
-                    selectedItem?.name === item.name
-                      ? "bg-blue-500/[0.07] border-blue-500 shadow-sm z-10"
-                      : "bg-card border-slate-200/60 hover:border-blue-500/40 hover:bg-blue-500/[0.02]"
-                  }`}
-                >
-                  {/* FOOLPROOF HOVER BORDER */}
-                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-blue-600 transition-colors pointer-events-none z-20" />
+                <div className="flex items-center gap-3">
+                  {/* MAP VIEW */}
+                  <button
+                    onClick={() => setIsMapOpen(true)}
+                    className="group flex h-10 items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-4 text-[16px] font-medium text-slate-600 shadow-sm transition-all duration-200 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-blue-500/40 dark:hover:bg-blue-500/10 dark:hover:text-blue-400"
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:group-hover:bg-blue-500/20">
+                      <Globe size={15} />
+                    </span>
+                    <span className="whitespace-nowrap ">Map View</span>
+                  </button>
+
+                  {/* DOWNLOAD REPORT */}
+                  <button
+                    onClick={handleDownloadReport}
+                    disabled={isGeneratingPdf}
+                    className="group flex h-10 items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-4 text-[16px] font-medium text-slate-600 shadow-sm transition-all duration-200 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-emerald-500/40 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400"
+                  >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-50 text-emerald-600 transition-colors group-hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:group-hover:bg-emerald-500/20">
+                      <Database size={15} className={isGeneratingPdf ? "animate-spin" : ""} />
+                    </span>
+                    <span className="whitespace-nowrap">
+                      {isGeneratingPdf ? "Generating..." : "Download Report"}
+                    </span>
+                    {isGeneratingPdf && (
+                      <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-1" />
+                    )}
+                  </button>
+                </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Geospatial Modal Overlay */}
+        <AnimatePresence>
+          {isMapOpen && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9999] flex items-center justify-center p-12 bg-slate-900/40 backdrop-blur-md"
+            >
+              <motion.div 
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="w-full h-full bg-card border border-theme shadow-2xl rounded-none overflow-hidden relative flex flex-col"
+              >
+                <div className="px-10 py-6 border-b border-theme bg-card flex items-center justify-between z-10">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-blue-600/10 rounded-none">
+                      <Globe size={24} className="text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-black text-foreground uppercase tracking-tight">{selectedItem?.name}</h2>
+                      <p className="text-[10px] text-slate-400 font-black tracking-widest mt-0.5">IP Geo Distribution</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setIsMapOpen(false)}
+                    className="p-3 hover:bg-rose-500/10 hover:text-rose-500 rounded-full transition-colors text-slate-400"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                <div className="flex-1 relative">
+                  <WorldMapLeaflet 
+                    externalIps={detailsData} 
+                    mode="pcap"
+                    onIpClick={(ip) => {
+                      handleIpSelect(ip);
+                      setIsMapOpen(false);
+                    }}
+                  />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence mode="wait">
+          {selectedItem && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mx-10 grid grid-cols-1 gap-8 lg:grid-cols-12"
+            >
+              {/* IP List Column */}
+              <div className="lg:col-span-3 space-y-6">
+                <div className="bg-card shadow-sm overflow-hidden flex flex-col h-full min-h-[1000px]">
+                  <div className="px-8 py-4 bg-slate-500/[0.02] flex items-center justify-between">
+                    <span className="text-[17px]   ">Discovered IPs</span>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-none text-[14px]  text-blue-600 ">
+                        {isLoadingDetails ? '...' : detailsData.length} Records Total
+                      </div>
                   
-                  <div className="flex items-center gap-4 relative z-10">
-                    {isCountry ? (
-                      <div className={`w-7 h-5 rounded-sm overflow-hidden border shrink-0 flex items-center justify-center ${selectedItem?.name === item.name ? 'border-white/30 bg-white/10 shadow-[0_0_10px_rgba(255,255,255,0.12)]' : 'border-slate-200/70 bg-slate-50'}`}>
-                        {flagClass ? (
-                          <span className={`${flagClass} scale-[1.15]`} aria-hidden="true" />
-                        ) : (
-                          <div className="w-full h-full bg-slate-300" aria-hidden="true" />
-                        )}
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    {isLoadingDetails ? (
+                      <div className="flex flex-col items-center justify-center py-20 gap-4">
+                        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                        <p className="text-slate-400 font-black text-[9px]  animate-pulse">IP Searching....</p>
+                      </div>
+                    ) : error ? (
+                      <div className="flex flex-col items-center justify-center py-20 px-8 text-center gap-4">
+                        <AlertTriangle className="w-8 h-8 text-rose-500" />
+                        <p className="text-rose-500 font-black text-[10px] uppercase tracking-widest">{error}</p>
+                      </div>
+                    ) : detailsData.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-24 px-8 text-center gap-4">
+                        <div className="p-4 bg-slate-500/5 rounded-none">
+                          <Terminal className="w-8 h-8 text-slate-300" />
+                        </div>
+                        <div>
+                          <p className="text-slate-500 font-black text-[10px] ">No Records Discovered</p>
+                          <p className="text-[9px]  mt-1">Select a different region to begin discovery</p>
+                        </div>
                       </div>
                     ) : (
-                      <div className={`w-2 h-2 rounded-none ${selectedItem?.name === item.name ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]' : `${accentClass} group-hover:scale-125 transition-all`} shrink-0 shadow-sm`} />
-                    )}
-                    <div className="text-[15px]  truncate group-hover:translate-x-0.5 transition-transform duration-300">
-                      {displayName}
-                    </div>
-                  </div>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Selected Country Context Bar */}
-      <AnimatePresence>
-        {selectedItem && (
-          <motion.div 
-            ref={detailsRef}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex items-center justify-between px-10 py-8 bg-card border border-theme shadow-sm scroll-mt-20"
-          >
-            <div className="flex items-center gap-6">
-              {selectedCountryFlagClass && (
-                <div className="w-10 h-7 rounded-sm overflow-hidden border border-slate-200/70 bg-slate-50 flex items-center justify-center shrink-0">
-                  <span className={`${selectedCountryFlagClass} scale-[1.15]`} aria-hidden="true" />
-                </div>
-              )}
-              <h3 className="text-3xl font-bold text-foreground  ">{discoveryMode === "country" ? selectedCountryDisplayName : selectedIspDisplayName}</h3>
-            </div>
-            
-              <div className="flex items-center gap-3">
-                {/* MAP VIEW */}
-                <button
-                  onClick={() => setIsMapOpen(true)}
-                  className="group relative flex items-center gap-3 pl-4 pr-7 py-0 h-12 bg-slate-500/10 hover:bg-gradient-to-r hover:from-blue-600/20 hover:to-slate-500/10 active:scale-[0.98] transition-all duration-200 shadow-sm border border-theme hover:border-blue-500/30 overflow-hidden cursor-pointer"
-                >
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
-                  <div className="flex items-center justify-center w-8 h-8 bg-blue-600/10 group-hover:bg-blue-600/20 rounded-none shrink-0 transition-colors">
-                    <Globe size={16} className="text-blue-500 transition-colors" />
-                  </div>
-                  <span className="text-[19px] font-black text-blue-500  whitespace-nowrap">
-                    Map View
-                  </span>
-                </button>
-
-                {/* DOWNLOAD REPORT */}
-                <button
-                  onClick={handleDownloadReport}
-                  disabled={isGeneratingPdf}
-                  className="group relative flex items-center gap-3 pl-4 pr-7 py-0 h-12 bg-slate-500/10 hover:bg-gradient-to-r hover:from-emerald-600/20 hover:to-slate-500/10 active:scale-[0.98] transition-all duration-200 shadow-sm border border-theme hover:border-emerald-500/30 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent pointer-events-none" />
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="flex items-center justify-center w-8 h-8 bg-emerald-500/10 group-hover:bg-emerald-500/20 rounded-none shrink-0 transition-colors">
-                    <Database size={16} className={`text-emerald-500 transition-colors ${isGeneratingPdf ? 'animate-spin' : ''}`} />
-                  </div>
-                  <span className="text-[19px] font-black text-slate-400 group-hover:text-emerald-500  whitespace-nowrap transition-colors">
-                    {isGeneratingPdf ? 'Generating...' : 'Download Report'}
-                  </span>
-                  {isGeneratingPdf && (
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-1" />
-                  )}
-                </button>
-              </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Geospatial Modal Overlay */}
-      <AnimatePresence>
-        {isMapOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-12 bg-slate-900/40 backdrop-blur-md"
-          >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full h-full bg-card border border-theme shadow-2xl rounded-none overflow-hidden relative flex flex-col"
-            >
-              <div className="px-10 py-6 border-b border-theme bg-card flex items-center justify-between z-10">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 bg-blue-600/10 rounded-none">
-                    <Globe size={24} className="text-blue-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-black text-foreground uppercase tracking-tight">{selectedItem?.name}</h2>
-                    <p className="text-[10px] text-slate-400 font-black tracking-widest mt-0.5">IP Geo Distribution</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => setIsMapOpen(false)}
-                  className="p-3 hover:bg-rose-500/10 hover:text-rose-500 rounded-full transition-colors text-slate-400"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              
-              <div className="flex-1 relative">
-                <WorldMapLeaflet 
-                  externalIps={detailsData} 
-                  mode="pcap"
-                  onIpClick={(ip) => {
-                    handleIpSelect(ip);
-                    setIsMapOpen(false);
-                  }}
-                />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence mode="wait">
-        {selectedItem && (
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-8"
-          >
-            {/* IP List Column */}
-            <div className="lg:col-span-3 space-y-6">
-              <div className="bg-card shadow-sm overflow-hidden flex flex-col h-full min-h-[1000px]">
-                <div className="px-8 py-4 bg-slate-500/[0.02] flex items-center justify-between">
-                  <span className="text-[17px]   ">Discovered IPs</span>
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-none text-[14px]  text-blue-600 ">
-                      {isLoadingDetails ? '...' : detailsData.length} Records Total
-                    </div>
-                
-                  </div>
-                </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                  {isLoadingDetails ? (
-                    <div className="flex flex-col items-center justify-center py-20 gap-4">
-                      <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
-                      <p className="text-slate-400 font-black text-[9px]  animate-pulse">IP Searching....</p>
-                    </div>
-                  ) : error ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-8 text-center gap-4">
-                      <AlertTriangle className="w-8 h-8 text-rose-500" />
-                      <p className="text-rose-500 font-black text-[10px] uppercase tracking-widest">{error}</p>
-                    </div>
-                  ) : detailsData.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-24 px-8 text-center gap-4">
-                      <div className="p-4 bg-slate-500/5 rounded-none">
-                        <Terminal className="w-8 h-8 text-slate-300" />
+                      <div className="">
+                        {paginatedIps.map((item, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleIpSelect(item.ip)}
+                            className={`w-full px-8 py-6 text-left transition-all flex items-center justify-between group cursor-pointer ${
+                              selectedIp === item.ip 
+                                ? "bg-blue-600/10" 
+                                : "bg-card hover:bg-slate-500/[0.03]"
+                            }`}
+                          >
+                            <div>
+                              <div className="text-[15px] font-black ">{item.ip}</div>
+                              <div className="text-[13px] font-bold mt-1 text-slate-500">
+                                {item.isp || "Unknown Provider"}
+                              </div>
+                            </div>
+                            <ChevronRight size={18} className={`transition-transform ${
+                              selectedIp === item.ip ? "translate-x-1 opacity-100" : "opacity-0 group-hover:opacity-100"
+                            }`} />
+                          </button>
+                        ))}
                       </div>
-                      <div>
-                        <p className="text-slate-500 font-black text-[10px] ">No Records Discovered</p>
-                        <p className="text-[9px]  mt-1">Select a different region to begin discovery</p>
+                    )}
+                  </div>
+
+                  {/* Pagination Control */}
+                  {totalPages > 1 && (
+                    <div className="p-4 bg-slate-500/5 border-t border-theme flex flex-col gap-4">
+                      <div className="flex items-center justify-between px-2">
+                        <span className="text-[12px]">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                      
+                      </div>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          onClick={() => setCurrentPage(1)}
+                          disabled={currentPage === 1}
+                          className="w-8 h-8 flex items-center justify-center text-[10px] font-black text-slate-400 hover:text-blue-600 disabled:opacity-20 transition-all border border-theme bg-card"
+                        >
+                          «
+                        </button>
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                          disabled={currentPage === 1}
+                          className="w-8 h-8 flex items-center justify-center text-[10px] font-black text-slate-400 hover:text-blue-600 disabled:opacity-20 transition-all border border-theme bg-card"
+                        >
+                          ‹
+                        </button>
+
+                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else {
+                            if (currentPage <= 3) pageNum = i + 1;
+                            else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
+                            else pageNum = currentPage - 2 + i;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`w-8 h-8 flex items-center justify-center text-[10px] font-black transition-all border ${
+                                currentPage === pageNum
+                                  ? "bg-blue-50 text-blue-600 border-blue-600 shadow-md shadow-blue-500/10"
+                                  : "text-slate-500 border-theme hover:border-blue-500/30 hover:bg-slate-500/10 bg-card"
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        })}
+
+                        <button
+                          onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                          disabled={currentPage === totalPages}
+                          className="w-8 h-8 flex items-center justify-center text-[10px] font-black text-slate-400 hover:text-blue-600 disabled:opacity-20 transition-all border border-theme bg-card"
+                        >
+                          ›
+                        </button>
+                        <button
+                          onClick={() => setCurrentPage(totalPages)}
+                          disabled={currentPage === totalPages}
+                          className="w-8 h-8 flex items-center justify-center text-[10px] font-black text-slate-400 hover:text-blue-600 disabled:opacity-20 transition-all border border-theme bg-card"
+                        >
+                          »
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Intelligence Profile Column (Matching IP Search layout) */}
+              <div className="lg:col-span-9">
+                <div className="flex flex-col h-full">
+                  {isLoadingIntel ? (
+                    <div className="bg-card/30 backdrop-blur-sm border border-theme shadow-sm flex-1 flex flex-col items-center justify-center py-40 gap-6 rounded-none">
+                      <div className="relative">
+                        <Activity className="w-16 h-16 text-blue-600 animate-pulse" />
+                        <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full animate-pulse" />
+                      </div>
+                      <span className="text-[11px] font-black text-blue-500 uppercase tracking-[0.4em] animate-pulse">
+                        Scanning Intelligence...
+                      </span>
+                    </div>
+                  ) : ipIntelligence ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in slide-in-from-bottom-4 duration-500">
+                      {/* Left Column */}
+                      <div className="lg:col-span-4 flex flex-col gap-8">
+                        {/* Host Identity */}
+                        <div className="bg-card border border-theme p-8 rounded-none relative overflow-hidden group transition-all duration-500">
+                          <div
+                            className={`absolute top-6 right-6 px-3 py-1 rounded-none text-[10px] font-black uppercase tracking-widest ${
+                              ipIntelligence.status === "up"
+                                ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                                : "bg-slate-500/10 text-slate-500 border border-slate-500/20"
+                            }`}
+                          >
+                            {ipIntelligence.status || "Unknown"}
+                          </div>
+
+                          <div className="flex items-center gap-5 mb-8">
+                            <div className="w-16 h-16 bg-blue-500/10 rounded-none flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform duration-500">
+                              <Server size={28} className="text-blue-500" />
+                            </div>
+
+                            <div className="min-w-0">
+                              <div className="text-[16px] font-semibold text-slate-500 mb-0.5">
+                                Host Identity
+                              </div>
+                              <div className="text-2xl font-bold text-foreground truncate group-hover:text-blue-500 transition-colors">
+                                {ipIntelligence.ip}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-4">
+                            <DetailRow
+                              icon={Globe}
+                              label="Autonomous System Number"
+                              value={ipIntelligence.asn}
+                              color="blue"
+                            />
+                            <DetailRow
+                              icon={Cpu}
+                              label="OS Match"
+                              value={ipIntelligence.os_info?.best_match}
+                              subValue={`Confidence: ${ipIntelligence.os_info?.confidence}%`}
+                              color="purple"
+                            />
+                            <DetailRow
+                              icon={Shield}
+                              label="DNSBL Status"
+                              value={
+                                ipIntelligence.dnsbl?.listed
+                                  ? "Listed / At Risk"
+                                  : "Clean"
+                              }
+                              color={
+                                ipIntelligence.dnsbl?.listed ? "rose" : "emerald"
+                              }
+                            />
+                            <DetailRow
+                              icon={Terminal}
+                              label="rDNS / Hostname"
+                              value={
+                                ipIntelligence.rdns ||
+                                (ipIntelligence.hostnames?.length
+                                  ? ipIntelligence.hostnames.join(", ")
+                                  : null)
+                              }
+                              color="indigo"
+                            />
+                            <DetailRow
+                              icon={Zap}
+                              label="Proxy Type"
+                              value={ipIntelligence.proxy_type}
+                              color="amber"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Geographic Intel */}
+                        <div className="bg-card border border-theme p-8 rounded-none">
+                          <div className="flex items-center gap-4 mb-6">
+                            <div className="p-2 bg-orange-500/10 rounded-none">
+                              <MapPin size={20} className="text-orange-500" />
+                            </div>
+                            <div className="text-[16px] font-bold text-foreground">
+                              Geographic Intel
+                            </div>
+                          </div>
+
+                          <div className="space-y-6">
+                            <div>
+                              <div className="text-[16px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
+                                City / Region
+                              </div>
+                              <div className="text-[14px] break-words">
+                                {ipIntelligence.geo?.city || "Unknown City"}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-[16px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
+                                Country
+                              </div>
+                              <div className="text-[14px] break-words">
+                                {ipIntelligence.geo?.country || "Unknown Country"}
+                              </div>
+                            </div>
+
+                            <div>
+                              <div className="text-[16px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
+                                Service Provider
+                              </div>
+                              <div className="text-[14px] break-words">
+                                {ipIntelligence.geo?.isp || "Unknown ISP"}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-theme">
+                              <div>
+                                <div className="text-[16px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
+                                  Latitude
+                                </div>
+                                <div className="text-[14px] break-words">
+                                  {ipIntelligence.geo?.latitude || "N/A"}
+                                </div>
+                              </div>
+
+                              <div>
+                                <div className="text-[16px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
+                                  Longitude
+                                </div>
+                                <div className="text-[14px] break-words">
+                                  {ipIntelligence.geo?.longitude || "N/A"}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Column */}
+                      <div className="lg:col-span-8 flex flex-col gap-8">
+                        {/* Ports & Service Detection */}
+                        <div className="flex flex-col gap-4">
+                          <div className="flex items-center justify-between px-4">
+                            <div className="flex items-center gap-4">
+                              <div className="p-3 bg-slate-500/[0.05] border border-theme rounded-none shadow-sm">
+                                <Activity size={24} className="text-rose-500" />
+                              </div>
+                              <div>
+                                <h3 className="text-[14px] font-bold text-foreground">
+                                  Ports & Service Detection
+                                </h3>
+                                <p className="text-[14px] mt-0.5">
+                                  Active Network Services
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-none text-[10px] text-blue-600">
+                                {ipIntelligence.ports?.length || 0} Ports Found
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="bg-card rounded-none overflow-hidden flex flex-col shadow-sm">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left">
+                                <thead className="bg-slate-500/5">
+                                  <tr>
+                                    <th className="px-8 py-4 text-[14px] font-bold">Port</th>
+                                    <th className="px-8 py-4 text-[14px] font-bold">Service</th>
+                                    <th className="px-8 py-4 text-[14px] font-bold">Protocol</th>
+                                    <th className="px-8 py-4 text-[14px] font-bold">State</th>
+                                    <th className="px-8 py-4 text-[14px] font-bold">Reason</th>
+                                  </tr>
+                                </thead>
+
+                                <tbody>
+                                  {ipIntelligence.ports?.map((p, i) => (
+                                    <tr
+                                      key={i}
+                                      className="group hover:bg-slate-500/5 transition-colors"
+                                    >
+                                      <td className="px-8 py-5">
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-[14px] text-foreground">
+                                            {p.port}
+                                          </span>
+                                          {p.state === "open" && (
+                                            <CheckCircle2
+                                              size={12}
+                                              className="text-emerald-500"
+                                            />
+                                          )}
+                                        </div>
+                                      </td>
+
+                                      <td className="px-8 py-5">
+                                        <div className="text-[11px] text-blue-500 uppercase bg-blue-500/5 px-2 py-1 rounded-none border border-blue-500/10 inline-block">
+                                          {p.service || p.application || "Unknown"}
+                                        </div>
+                                      </td>
+
+                                      <td className="px-8 py-5 text-[11px] uppercase">
+                                        {p.protocol}
+                                      </td>
+
+                                      <td className="px-8 py-5">
+                                        <span
+                                          className={`text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded-none border ${
+                                            p.state === "open"
+                                              ? "text-emerald-500 bg-emerald-500/5 border-emerald-500/20"
+                                              : "text-slate-400 bg-slate-500/5 border-slate-500/20"
+                                          }`}
+                                        >
+                                          {p.state}
+                                        </span>
+                                      </td>
+
+                                      <td className="px-8 py-5 text-right">
+                                        <span className="text-[10px] uppercase">
+                                          {p.reason || "N/A"}
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+
+                                  {(!ipIntelligence.ports ||
+                                    ipIntelligence.ports.length === 0) && (
+                                    <tr>
+                                      <td
+                                        colSpan="5"
+                                        className="px-8 py-20 text-center text-xs"
+                                      >
+                                        No Open Ports Discovered
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Ownership Details */}
+                        <div className="bg-card border border-theme p-8 rounded-none">
+                          <div className="flex items-center gap-4 mb-8">
+                            <div className="p-2 bg-emerald-500/10 rounded-none">
+                              <User size={20} className="text-emerald-500" />
+                            </div>
+                            <div className="text-[14px] font-bold text-foreground">
+                              Ownership Details
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
+                            <WhoisSection
+                              title="Registrant Information"
+                              data={ipIntelligence.whois?.contacts?.registrant}
+                            />
+                            <WhoisSection
+                              title="Technical Contact"
+                              data={ipIntelligence.whois?.contacts?.technical}
+                            />
+                            <WhoisSection
+                              title="Abuse Contact"
+                              data={ipIntelligence.whois?.contacts?.abuse}
+                            />
+                            <WhoisSection
+                              title="Administrative Contact"
+                              data={ipIntelligence.whois?.contacts?.administrative}
+                            />
+
+                            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-theme">
+                              <WhoisField
+                                label="Organization"
+                                value={
+                                  ipIntelligence.whois?.org ||
+                                  ipIntelligence.whois?.name
+                                }
+                              />
+                              <WhoisField
+                                label="Network Owner"
+                                value={ipIntelligence.whois?.network_owner}
+                              />
+                              <WhoisField
+                                label="CIDR Range"
+                                value={ipIntelligence.whois?.cidr}
+                              />
+                              <WhoisField
+                                label="Registrar"
+                                value={ipIntelligence.whois?.registrar}
+                              />
+                              <WhoisField
+                                label="Registered Date"
+                                value={ipIntelligence.whois?.registered}
+                              />
+                              <WhoisField
+                                label="Top Level Domain"
+                                value={ipIntelligence.whois?.tld}
+                              />
+                              <WhoisField
+                                label="Website"
+                                value={ipIntelligence.whois?.website}
+                              />
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="">
-                      {paginatedIps.map((item, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleIpSelect(item.ip)}
-                          className={`w-full px-8 py-6 text-left transition-all flex items-center justify-between group cursor-pointer ${
-                            selectedIp === item.ip 
-                              ? "bg-blue-600/10" 
-                              : "bg-card hover:bg-slate-500/[0.03]"
-                          }`}
-                        >
-                          <div>
-                            <div className="text-[15px] font-black ">{item.ip}</div>
-                            <div className="text-[13px] font-bold mt-1 text-slate-500">
-                              {item.isp || "Unknown Provider"}
-                            </div>
-                          </div>
-                          <ChevronRight size={18} className={`transition-transform ${
-                            selectedIp === item.ip ? "translate-x-1 opacity-100" : "opacity-0 group-hover:opacity-100"
-                          }`} />
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Pagination Control */}
-                {totalPages > 1 && (
-                  <div className="p-4 bg-slate-500/5 border-t border-theme flex flex-col gap-4">
-                    <div className="flex items-center justify-between px-2">
-                      <span className="text-[12px]">
-                        Page {currentPage} of {totalPages}
-                      </span>
-                     
-                    </div>
-                    <div className="flex items-center justify-center gap-1.5">
-                      <button
-                        onClick={() => setCurrentPage(1)}
-                        disabled={currentPage === 1}
-                        className="w-8 h-8 flex items-center justify-center text-[10px] font-black text-slate-400 hover:text-blue-600 disabled:opacity-20 transition-all border border-theme bg-card"
-                      >
-                        «
-                      </button>
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
-                        className="w-8 h-8 flex items-center justify-center text-[10px] font-black text-slate-400 hover:text-blue-600 disabled:opacity-20 transition-all border border-theme bg-card"
-                      >
-                        ‹
-                      </button>
-
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else {
-                          if (currentPage <= 3) pageNum = i + 1;
-                          else if (currentPage >= totalPages - 2) pageNum = totalPages - 4 + i;
-                          else pageNum = currentPage - 2 + i;
-                        }
-
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={`w-8 h-8 flex items-center justify-center text-[10px] font-black transition-all border ${
-                              currentPage === pageNum
-                                ? "bg-blue-50 text-blue-600 border-blue-600 shadow-md shadow-blue-500/10"
-                                : "text-slate-500 border-theme hover:border-blue-500/30 hover:bg-slate-500/10 bg-card"
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
-
-                      <button
-                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
-                        className="w-8 h-8 flex items-center justify-center text-[10px] font-black text-slate-400 hover:text-blue-600 disabled:opacity-20 transition-all border border-theme bg-card"
-                      >
-                        ›
-                      </button>
-                      <button
-                        onClick={() => setCurrentPage(totalPages)}
-                        disabled={currentPage === totalPages}
-                        className="w-8 h-8 flex items-center justify-center text-[10px] font-black text-slate-400 hover:text-blue-600 disabled:opacity-20 transition-all border border-theme bg-card"
-                      >
-                        »
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Intelligence Profile Column (Matching IPSearch layout) */}
-            <div className="lg:col-span-9">
-              <div className="flex flex-col h-full">
-                {isLoadingIntel ? (
-                  <div className="bg-card/30 backdrop-blur-sm border border-theme shadow-sm flex-1 flex flex-col items-center justify-center py-40 gap-6 rounded-none">
-                    <div className="relative">
-                      <Activity className="w-16 h-16 text-blue-600 animate-pulse" />
-                      <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full animate-pulse" />
-                    </div>
-                    <span className="text-[11px] font-black text-blue-500 uppercase tracking-[0.4em] animate-pulse">Scanning Intelligence...</span>
-                  </div>
-                ) : ipIntelligence ? (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in slide-in-from-bottom-4 duration-500">
-                    
-                    {/* Left Column (col-span-4) */}
-                    <div className="lg:col-span-4 flex flex-col gap-8">
-                      {/* Identity Header */}
-                      <div className="bg-card border border-theme p-8 rounded-none relative overflow-hidden">
-                        <div className={`absolute top-6 right-6 px-3 py-1 rounded-none text-[10px] font-black uppercase tracking-widest ${ipIntelligence.status === 'up' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'}`}>
-                          {ipIntelligence.status || 'Unknown'}
-                        </div>
-                        <div className="flex items-center gap-5 mb-8">
-                          <div className="w-16 h-16 bg-blue-500/10 rounded-none flex items-center justify-center shrink-0">
-                            <Server size={28} className="text-blue-500" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className=" font-black mb-1">Host Identity</div>
-                            <div className="text-2xl font-black text-foreground truncate">{ipIntelligence.ip}</div>
-                          </div>
-                        </div>
-                        <div className="space-y-4">
-                          <DetailRow icon={Globe} label="Autonomous System Number" value={ipIntelligence.asn} color="blue" />
-                          <DetailRow icon={Cpu} label="OS Match" value={ipIntelligence.os_info?.best_match} subValue={`Confidence: ${ipIntelligence.os_info?.confidence}%`} color="purple" />
-                          <DetailRow icon={Shield} label="DNSBL Status" value={ipIntelligence.dnsbl?.listed ? "Listed / At Risk" : "Clean"} color={ipIntelligence.dnsbl?.listed ? "rose" : "emerald"} />
-                          <DetailRow icon={Terminal} label="rDNS / Hostname" value={ipIntelligence.rdns || (ipIntelligence.hostnames?.length ? ipIntelligence.hostnames.join(", ") : null)} color="slate" />
-                          <DetailRow icon={Zap} label="Proxy Type" value={ipIntelligence.proxy_type} color="amber" />
-
-                        </div>
-                      </div>
-
-                    
-                     
-
-                      {/* Geographic Intel */}
-                      <div className="bg-card border border-theme p-8 rounded-none">
-                        <div className="flex items-center gap-4 mb-6">
-                          <div className="p-2 bg-orange-500/10 rounded-none">
-                            <MapPin size={20} className="text-orange-500" />
-                          </div>
-                          <div className="font-bold font-black text-foreground ">Geographic Intel</div>
-                        </div>
-                        <div className="space-y-6">
-                          <div>
-                            <div className="text-bold font-black   mb-2">City / Region</div>
-                            <div className="text-[14px] font-bold  break-words leading-tight text-slate-600">{ipIntelligence.geo?.city || 'Unknown City'}</div>
-                          </div>
-                          <div>
-                            <div className="fomt-bold font-black  mb-2">Country</div>
-                            <div className="text-[14px] font-bold  break-words leading-tight text-slate-600">{ipIntelligence.geo?.country || 'Unknown Country'}</div>
-                          </div>
-                          <div>
-                            <div className="font-bold font-black  mb-2">Service Provider</div>
-                            <div className="text-[14px] font-bold  break-words leading-tight text-slate-600">{ipIntelligence.geo?.isp || 'Unknown ISP'}</div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-theme">
-                             <div>
-                                <div className="font-bold font-black   mb-1">Latitude</div>
-                                <div className="text-[14px] font-bold  break-words leading-tight text-slate-600">{ipIntelligence.geo?.latitude || 'N/A'}</div>
-                             </div>
-                             <div>
-                                <div className="font-bold font-black   mb-1">Longitude</div>
-                                <div className="text-[14px] font-bold  break-words leading-tight text-slate-600">{ipIntelligence.geo?.longitude || 'N/A'}</div>
-                             </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Column (col-span-8) */}
-                    <div className="lg:col-span-8 flex flex-col gap-8">
-                      {/* Services Table */}
-                      <div className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between px-4">
-                          <div className="flex items-center gap-4">
-                            <div className="p-3 bg-slate-500/[0.05] border border-theme rounded-none shadow-sm">
-                              <Activity size={24} className="text-rose-500" />
-                            </div>
-                            <div>
-                              <h3 className="text-lg font-black text-foreground ">Ports & Service Detection</h3>
-                              <p className="font-smfont-black text-slate-600   mt-0.5">Active Network Services</p>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            <div className="px-4 py-1.5 bg-blue-500/10 rounded-none text-[11px] font-black text-blue-500 border border-blue-500/20">
-                              {ipIntelligence.ports?.length || 0} Ports Found
-                            </div>
-                            
-                          </div>
-                        </div>
-
-                        <div className="bg-card rounded-none overflow-hidden flex flex-col shadow-sm">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                              <thead className="bg-slate-500/5">
-                                <tr>
-                                  <th className="px-8 py-5 text-md font-black text-slate-600 ">Port</th>
-                                  <th className="px-8 py-5 text-md font-black text-slate-600 ">Service</th>
-                                  <th className="px-8 py-5 text-md font-black text-slate-600 ">Protocol</th>
-                                  <th className="px-8 py-5 text-md font-black text-slate-600 ">State</th>
-                                  <th className="px-8 py-5 text-md   font-black text-slate-600  text-right">Reason</th>
-                                </tr>
-                              </thead>
-                              <tbody className="">
-                                {ipIntelligence.ports?.map((p, i) => (
-                                  <tr key={i} className="group hover:bg-slate-500/5 transition-colors">
-                                    <td className="px-8 py-5">
-                                      <div className="flex items-center gap-3">
-                                        <span className="text-sm font-black text-foreground">{p.port}</span>
-                                        {p.state === 'open' && <CheckCircle2 size={12} className="text-emerald-500" />}
-                                      </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                      <div className="text-[11px] font-black text-blue-500 uppercase bg-blue-500/5 px-2 py-1 rounded-none border border-blue-500/10 inline-block">
-                                        {p.service || p.application || 'Unknown'}
-                                      </div>
-                                    </td>
-                                    <td className="px-8 py-5 text-[11px] font-black text-slate-500 uppercase tracking-widest">{p.protocol}</td>
-                                    <td className="px-8 py-5">
-                                      <span className={`text-[10px] font-black uppercase tracking-tighter px-2 py-1 rounded-none border ${p.state === 'open' ? 'text-emerald-500 bg-emerald-500/5 border-emerald-500/20' : 'text-slate-400 bg-slate-500/5 border-slate-500/20'}`}>
-                                        {p.state}
-                                      </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-left">
-                                      <span className="text-[10px] font-bold text-slate-600 ">{p.reason || 'N/A'}</span>
-                                    </td>
-                                  </tr>
-                                ))}
-                                {(!ipIntelligence.ports || ipIntelligence.ports.length === 0) && (
-                                  <tr>
-                                    <td colSpan="5" className="px-8 py-20 text-center text-xs ">No Open Ports Discovered</td>
-                                  </tr>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* WHOIS Section */}
-                      <div className="bg-card border border-theme p-8 rounded-none">
-                        <div className="flex items-center gap-4 mb-8">
-                          <div className="p-2 bg-emerald-500/10 rounded-none">
-                            <User size={20} className="text-emerald-500" />
-                          </div>
-                          <div className="text-lg font-black text-foreground">Ownership Details</div>
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-                          <WhoisSection title="Registrant Information" data={ipIntelligence.whois?.contacts?.registrant} />
-                          <WhoisSection title="Technical Contact" data={ipIntelligence.whois?.contacts?.technical} />
-                          <WhoisSection title="Abuse Contact" data={ipIntelligence.whois?.contacts?.abuse} />
-                          <WhoisSection title="Administrative Contact" data={ipIntelligence.whois?.contacts?.administrative} />
-                          
-                          <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 pt-10 border-t border-theme">
-                            <WhoisField label="Organization" value={ipIntelligence.whois?.org || ipIntelligence.whois?.name} />
-                            <WhoisField label="Network Owner" value={ipIntelligence.whois?.network_owner} />
-                            <WhoisField label="CIDR Range" value={ipIntelligence.whois?.cidr} />
-                            <WhoisField label="Registrar" value={ipIntelligence.whois?.registrar} />
-                            <WhoisField label="Registered Date" value={ipIntelligence.whois?.registered} />
-                            <WhoisField label="Top Level Domain" value={ipIntelligence.whois?.tld} />
-                            <WhoisField label="Website" value={ipIntelligence.whois?.website} />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
                     <div className="bg-card border border-theme shadow-sm flex-1 flex flex-col items-center justify-center py-60 gap-4 text-center">
                       <div className="w-16 h-16 bg-slate-500/5 rounded-full flex items-center justify-center border border-theme animate-pulse">
                         <ArrowRight className="text-slate-300" size={32} />
                       </div>
                       <div className="max-w-xs">
-                        <h4 className="text-[12px] font-black text-foreground uppercase tracking-[0.3em] opacity-80">IP SEARCHING</h4>
+                        <h4 className="text-[12px] font-black text-foreground uppercase tracking-[0.3em] opacity-80">
+                          IP SEARCHING
+                        </h4>
                       </div>
                     </div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showPasswordModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ type: "spring", duration: 0.3 }}
-              className="bg-card border-2 border-theme p-8 max-w-md w-full relative shadow-2xl flex flex-col items-center text-center rounded-none"
-            >
-              <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center mb-6 rounded-none">
-                <Shield size={32} className="animate-pulse" />
-              </div>
-              
-              <h3 className="text-xl font-black text-foreground uppercase tracking-tight mb-4">
-                PDF Securely Encrypted
-              </h3>
-              
-              <div className="space-y-4 text-left w-full mb-8">
-                <p className="text-[14px] text-slate-500 font-medium leading-relaxed text-center">
-                  To open the downloaded report, please use your dynamic PDF password.
-                </p>
-                <div className="bg-slate-500/5 border border-theme p-4 text-[12px] font-black text-foreground/90 uppercase tracking-wider space-y-2 text-center rounded-none">
-                  <div className="text-blue-500">Password Formula:</div>
-                  <div className="text-[13px] lowercase font-mono bg-card px-3 py-2 border border-theme inline-block select-all whitespace-nowrap">
-                    username(first 5) + password(first 5)
-                  </div>
+                  )}
                 </div>
-                <p className="text-[11px] text-slate-400 italic text-center font-medium leading-normal">
-                  Example: If username is <strong>admin1</strong> and password is <strong>password</strong>, the PDF password is <strong className="font-mono not-italic text-blue-500">adminpassw</strong>.
-                </p>
               </div>
-
-              <button
-                onClick={() => setShowPasswordModal(false)}
-                className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-black text-[12px] uppercase tracking-widest transition-all shadow-lg hover:shadow-blue-500/20 active:scale-95 rounded-none"
-              >
-                I Understand
-              </button>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+          )}
+        </AnimatePresence>
 
-DetailRow.propTypes = {
-  icon: PropTypes.elementType.isRequired,
-  label: PropTypes.string,
-  value: PropTypes.string,
-  subValue: PropTypes.string,
-  color: PropTypes.string,
-};
+        <AnimatePresence>
+          {showPasswordModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[9999] flex items-center justify-center p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ type: "spring", duration: 0.3 }}
+                className="bg-card border-2 border-theme p-8 max-w-md w-full relative shadow-2xl flex flex-col items-center text-center rounded-none"
+              >
+                <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center mb-6 rounded-none">
+                  <Shield size={32} className="animate-pulse" />
+                </div>
+                
+                <h3 className="text-xl font-black text-foreground uppercase tracking-tight mb-4">
+                  PDF Securely Encrypted
+                </h3>
+                
+                <div className="space-y-4 text-left w-full mb-8">
+                  <p className="text-[14px] text-slate-500 font-medium leading-relaxed text-center">
+                    To open the downloaded report, please use your dynamic PDF password.
+                  </p>
+                  <div className="bg-slate-500/5 border border-theme p-4 text-[12px] font-black text-foreground/90 uppercase tracking-wider space-y-2 text-center rounded-none">
+                    <div className="text-blue-500">Password Formula:</div>
+                    <div className="text-[13px] lowercase font-mono bg-card px-3 py-2 border border-theme inline-block select-all whitespace-nowrap">
+                      username(first 5) + password(first 5)
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-slate-400 italic text-center font-medium leading-normal">
+                    Example: If username is <strong>admin1</strong> and password is <strong>password</strong>, the PDF password is <strong className="font-mono not-italic text-blue-500">adminpassw</strong>.
+                  </p>
+                </div>
 
-function DetailRow({ icon: Icon, label, value, subValue, color }) {
-  const colorMap = {
-    blue: "text-blue-500 bg-blue-500/5 border-blue-500/10",
-    purple: "text-purple-500 bg-purple-500/5 border-purple-500/10",
-    rose: "text-rose-500 bg-rose-500/5 border-rose-500/10",
-    emerald: "text-emerald-500 bg-emerald-500/5 border-emerald-500/10",
-    slate: "text-slate-500 bg-slate-500/5 border-slate-500/10",
-    amber: "text-amber-500 bg-amber-500/5 border-amber-500/10",
+                <button
+                  onClick={() => setShowPasswordModal(false)}
+                  className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-black text-[12px] uppercase tracking-widest transition-all shadow-lg hover:shadow-blue-500/20 active:scale-95 rounded-none"
+                >
+                  I Understand
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+
+  DetailRow.propTypes = {
+    icon: PropTypes.elementType.isRequired,
+    label: PropTypes.string,
+    value: PropTypes.string,
+    subValue: PropTypes.string,
+    color: PropTypes.string,
   };
 
-  return (
-    <div className={`flex flex-col p-6 rounded-none border ${colorMap[color] || colorMap.slate} space-y-3`}>
-      <div className="flex items-center gap-4">
-        <Icon size={20} className="shrink-0" />
-      <div className="font-bold font-black ">{label}</div>
+  function DetailRow({ icon: Icon, label, value, subValue, color }) {
+    const colorMap = {
+      blue: "text-blue-500 bg-blue-500/5 border-blue-500/10",
+      purple: "text-purple-500 bg-purple-500/5 border-purple-500/10",
+      rose: "text-rose-500 bg-rose-500/5 border-rose-500/10",
+      emerald: "text-emerald-500 bg-emerald-500/5 border-emerald-500/10",
+      indigo: "text-indigo-500 bg-indigo-500/5 border-indigo-500/10",
+      slate: "text-slate-500 bg-slate-500/5 border-slate-500/10",
+      amber: "text-amber-500 bg-amber-500/5 border-amber-500/10",
+    };
+
+    return (
+      <div
+        className={`flex flex-col p-6 rounded-none border ${
+          colorMap[color] || colorMap.slate
+        } space-y-3`}
+      >
+        <div className="flex items-center gap-4">
+          <Icon size={30} className="shrink-0" />
+          <div className="text-[16px] font-bold text-slate-700 dark:text-slate-300">
+            {label}
+          </div>
+        </div>
+
+        <div className="min-w-0">
+          <div className="text-[14px] dark:text-slate-400 break-all mt-1">
+            {value || "N/A"}
+          </div>
+
+          {subValue && (
+            <div className="text-[12px] text-slate-400 mt-0.5">
+              {subValue}
+            </div>
+          )}
+        </div>
       </div>
+    );
+  }
+
+  WhoisSection.propTypes = {
+    title: PropTypes.string,
+    data: PropTypes.object,
+  };
+
+  function WhoisSection({ title, data }) {
+    if (!data) return null;
+
+    return (
+      <div className="p-6 bg-slate-500/[0.03] border border-theme rounded-none space-y-6">
+        <h4 className="text-[14px] font-semibold text-blue-500 border-b border-blue-500/10 pb-3">
+          {title}
+        </h4>
+
+        <div className="space-y-4">
+          <WhoisField label="Name" value={data.name} />
+          <WhoisField label="Email" value={data.email} />
+          <WhoisField label="Phone" value={data.phone} />
+          <WhoisField label="Handle" value={data.handle} />
+          <WhoisField label="Address" value={data.address} />
+        </div>
+      </div>
+    );
+  }
+
+  WhoisField.propTypes = {
+    label: PropTypes.string,
+    value: PropTypes.string,
+  };
+
+  function WhoisField({ label, value }) {
+    return (
       <div className="min-w-0">
-        <div className="text-[15px] font-black text-foreground break-all leading-tight">{value || "N/A"}</div>
-        {subValue && <div className="text-[12px] font-bold opacity-60 mt-0.5">{subValue}</div>}
+        <div className="text-[16px] font-bold text-slate-700 dark:text-slate-300 mb-0.5">
+          {label}
+        </div>
+        <div className="text-[14px] break-words">
+          {value || "N/A"}
+        </div>
       </div>
-    </div>
-  );
-}
-
-WhoisSection.propTypes = {
-  title: PropTypes.string,
-  data: PropTypes.object,
-};
-
-function WhoisSection({ title, data }) {
-  if (!data) return null;
-  return (
-    <div className="p-6 bg-slate-500/[0.03] border border-theme rounded-none space-y-6">
-      <h4 className="font-black text-blue-500 
-        border-b border-blue-500/10 pb-3">{title}</h4>
-      <div className="space-y-4">
-        <WhoisField label="Name" value={data.name} />
-        <WhoisField label="Email" value={data.email} />
-        <WhoisField label="Phone" value={data.phone} />
-        <WhoisField label="Handle" value={data.handle} />
-        <WhoisField label="Address" value={data.address} />
-      </div>
-    </div>
-  );
-}
-
-WhoisField.propTypes = {
-  label: PropTypes.string,
-  value: PropTypes.string,
-};
-
-function WhoisField({ label, value }) {
-  return (
-    <div className="min-w-0">
-      <div className="text-bold font-black  mb-1.5">{label}</div>
-      <div className="text-[14px] text-slate-600  font-bold font-black text-foreground break-all leading-snug">{value || "N/A"}</div>
-    </div>
-  );
-}
+    );
+  }

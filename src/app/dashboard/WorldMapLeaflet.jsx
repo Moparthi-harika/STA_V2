@@ -536,8 +536,9 @@ const getLandStyle = (theme, hovered = false) => {
 };
 
 
-const SUMMARY_LAND_FILL = '#ffffff';
-const SUMMARY_BORDER_COLOR = 'rgba(30, 41, 59, 0.42)'; // darker + a touch more opaque so borders read crisply on pure-white land
+// --- AFTER: classic Leaflet colors ---
+const SUMMARY_LAND_FILL = '#f2efe9';
+const SUMMARY_BORDER_COLOR = '#cfcabd';
 
 const getSummaryLandStyle = () => ({
   color: SUMMARY_BORDER_COLOR,
@@ -550,9 +551,8 @@ const getSummaryLandStyle = () => ({
   smoothFactor: 0
 });
 
-// map background gradient for summary mode
-const SUMMARY_MAP_BACKGROUND = 'radial-gradient(135% 110% at 50% 28%, #6fb8e6 0%, #3f8fc4 45%, #256d9e 100%)';
-
+// Flat, not a gradient — matches the stock Leaflet/OSM water tile color.
+const SUMMARY_MAP_BACKGROUND = '#aad3df';
 const formatCompactCount = (count) => {
   const value = Number(count) || 0;
   if (value >= 1_000_000) {
@@ -923,7 +923,7 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
 
   return (
     <div
-      className="w-full h-full relative z-0 rounded-none overflow-hidden border border-theme transition-colors bg-card [&_.leaflet-container]:!bg-[var(--leaflet-bg)] [&_.continent-label-marker]:!bg-transparent [&_.continent-label-marker]:!border-0 [&_.continent-label-marker]:!shadow-none [&_.leaflet-tooltip]:!bg-[hsl(var(--card)/0.7)] [&_.leaflet-tooltip]:!backdrop-blur-xl [&_.leaflet-tooltip]:!border [&_.leaflet-tooltip]:!border-[hsl(var(--border))] [&_.leaflet-tooltip]:!rounded-xl [&_.leaflet-tooltip]:!shadow-[0_20px_25px_-5px_rgb(0_0_0_/_0.1),0_8px_10px_-6px_rgb(0_0_0_/_0.1)] [&_.leaflet-tooltip]:!p-0 [&_.leaflet-tooltip]:!text-[hsl(var(--foreground))] [&_.leaflet-tooltip]:overflow-hidden [&_.leaflet-grab]:!cursor-pointer [&_.leaflet-dragging_.leaflet-grab]:!cursor-grabbing"
+      className="w-full h-full relative z-0 rounded-[24px] overflow-hidden border border-theme/70 transition-all duration-300 bg-card shadow-[0_18px_50px_rgba(15,23,42,0.16)] [&_.leaflet-container]:!bg-[var(--leaflet-bg)] [&_.continent-label-marker]:!bg-transparent [&_.continent-label-marker]:!border-0 [&_.continent-label-marker]:!shadow-none [&_.leaflet-tooltip]:!bg-[hsl(var(--card)/0.7)] [&_.leaflet-tooltip]:!backdrop-blur-xl [&_.leaflet-tooltip]:!border [&_.leaflet-tooltip]:!border-[hsl(var(--border))] [&_.leaflet-tooltip]:!rounded-xl [&_.leaflet-tooltip]:!shadow-[0_20px_25px_-5px_rgb(0_0_0_/_0.1),0_8px_10px_-6px_rgb(0_0_0_/_0.1)] [&_.leaflet-tooltip]:!p-0 [&_.leaflet-tooltip]:!text-[hsl(var(--foreground))] [&_.leaflet-tooltip]:overflow-hidden [&_.leaflet-grab]:!cursor-pointer [&_.leaflet-dragging_.leaflet-grab]:!cursor-grabbing"
       style={mapContainerStyle}
     >
       <MapContainer
@@ -1044,14 +1044,15 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
 
         {mode === 'reports' ? (
           reportsGroupedPoints.map((point, idx) => {
-            const markerSize = getPcapMarkerSize(point.count, zoomLevel);
+            // Reports show IP locations inside a country. Keep every marker
+            // compact and the same size so dense areas do not get cluttered.
+            const markerSize = 20;
             const pointStyle = getPcapPointStyle(point.count);
-            const countLabelSizeClass = point.count > 999 ? 'text-[9px]' : 'text-[10px]';
             const icon = L.divIcon({
               html: `
                 <div class="pcap-marker group" style="width: ${markerSize}px; height: ${markerSize}px; background: ${pointStyle.marker}; box-shadow: ${buildGlowShadow(pointStyle)};">
                   <div class="pcap-pulse" style="background: ${pointStyle.marker};"></div>
-                  <span style="position: relative; z-index: 2; font-size: ${point.count > 999 ? 9 : 10}px;">${point.count.toLocaleString()}</span>
+                  <span style="position: relative; z-index: 2; font-size: 10px;">${point.count.toLocaleString()}</span>
                 </div>
               `,
               className: '',
@@ -1242,7 +1243,7 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="absolute top-32 right-10 z-[1001] w-96 bg-card border border-theme rounded-none shadow-2xl overflow-hidden"
+            className="absolute top-32 right-10 z-[1001] w-96 bg-card/95 backdrop-blur-xl border border-theme/70 rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.22)] overflow-hidden"
           >
             <motion.div
               className="p-5 bg-blue-500/5 border-b border-theme flex items-center justify-between cursor-move group/header"

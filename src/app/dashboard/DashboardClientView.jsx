@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import PropTypes from "prop-types";
+
 import {
   LayoutDashboard,
   FileText,
@@ -10,7 +11,6 @@ import {
   Search,
   ChevronDown,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 
 import { WorldMapLeaflet } from "./WorldMapLeaflet";
 import { DashboardSummary } from "./DashboardSummary";
@@ -61,6 +61,8 @@ export default function DashboardClientView({ session }) {
 
       if (tab) {
         setActiveTab(tab);
+      } else {
+        setActiveTab("Pcap Summary");
       }
     };
 
@@ -100,8 +102,14 @@ export default function DashboardClientView({ session }) {
 
         console.log("[Dashboard] All data received successfully");
 
+        // -----------------------------------------------------
+        // Map data
+        // -----------------------------------------------------
         setMapData(globalMap.data || []);
 
+        // -----------------------------------------------------
+        // Dashboard data
+        // -----------------------------------------------------
         const summary = overview.capture_summary || {};
         const traffic = overview.traffic_distribution || {};
         const trends = insights.insights_trends || {};
@@ -142,34 +150,26 @@ export default function DashboardClientView({ session }) {
   }, []);
 
   // ---------------------------------------------------------
-  // Scroll tab bar into position when URL contains a tab
+  // Scroll to tab navigation
+  //
+  // The tab bar sits below the main header.
+  // When a tab is clicked, immediately bring the tab bar
+  // into its sticky position.
   // ---------------------------------------------------------
-  useEffect(() => {
-    const url = new URL(window.location.href);
-    const tabParam = url.searchParams.get("tab");
+  const scrollToTabBar = () => {
+    if (!tabBarRef.current) return;
 
-    if (tabParam && tabParam !== "Pcap Summary") {
-      const timer = setTimeout(() => {
-        if (tabBarRef.current) {
-          const yOffset = -70;
+    const headerOffset = 56;
 
-          const element = tabBarRef.current;
+    const elementTop =
+      tabBarRef.current.getBoundingClientRect().top +
+      window.pageYOffset;
 
-          const y =
-            element.getBoundingClientRect().top +
-            window.pageYOffset +
-            yOffset;
-
-          window.scrollTo({
-            top: y,
-            behavior: "smooth",
-          });
-        }
-      }, 300);
-
-      return () => clearTimeout(timer);
-    }
-  }, [activeTab]);
+    window.scrollTo({
+      top: Math.max(0, elementTop - headerOffset),
+      behavior: "auto",
+    });
+  };
 
   // ---------------------------------------------------------
   // Tab change
@@ -178,27 +178,19 @@ export default function DashboardClientView({ session }) {
     setActiveTab(tabId);
 
     const url = new URL(window.location.href);
-
     url.searchParams.set("tab", tabId);
 
     window.history.pushState({}, "", url);
 
-    // Bring the navigation area into view.
-    if (tabBarRef.current) {
-      const yOffset = -70;
-
-      const element = tabBarRef.current;
-
-      const y =
-        element.getBoundingClientRect().top +
-        window.pageYOffset +
-        yOffset;
-
-      window.scrollTo({
-        top: y,
-        behavior: "smooth",
-      });
-    }
+    /*
+     * Scroll immediately after changing the active tab.
+     *
+     * requestAnimationFrame gives React one render cycle
+     * before calculating the tab bar position.
+     */
+    requestAnimationFrame(() => {
+      scrollToTabBar();
+    });
   };
 
   // ---------------------------------------------------------
@@ -247,34 +239,34 @@ export default function DashboardClientView({ session }) {
   // ---------------------------------------------------------
   return (
     <div className="space-y-0 pb-10">
+
       {/* =====================================================
           WORLD MAP
           ===================================================== */}
-      <div className="h-[calc(100vh-56px-64px)] w-full">
-        <WorldMapLeaflet
-          mode="summary"
-          countryData={mapData}
-          title="Overall IP Geo Distribution"
-        />
-      </div>
+   <div className="mx-6 mt-4 h-[clamp(500px,68vh,680px)] overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white shadow-[0_20px_50px_rgba(71,85,105,0.14),0_2px_10px_rgba(71,85,105,0.06)] dark:border-slate-700/70 dark:bg-slate-900 dark:shadow-[0_20px_50px_rgba(2,6,23,0.38)]">
+  <WorldMapLeaflet
+    mode="summary"
+    countryData={mapData}
+    title="Overall IP Geo Distribution"
+  />
+</div>
 
       {/* =====================================================
           TAB NAVIGATION
+          =====================================================
+
+          IMPORTANT:
+          - Sticky below the main header
+          - Opaque background prevents charts from showing
+            through the navigation
+          - z-index keeps it above all dashboard content
           ===================================================== */}
-      <div
-        ref={tabBarRef}
-        className="
-          sticky
-          top-14
-          z-30
-          w-full
-          bg-transparent
-          py-5
-        "
-      >
-        {/* Navigation width container */}
+    <div ref={tabBarRef} className="sticky top-14 z-30 w-full bg-white py-4  dark:bg-slate-950">
         <div className="mx-6">
-          {/* Main navigation shell */}
+
+          {/* -------------------------------------------------
+              Main navigation shell
+              ------------------------------------------------- */}
           <div
             className="
               relative
@@ -284,15 +276,15 @@ export default function DashboardClientView({ session }) {
               rounded-2xl
               border
               border-blue-400/40
-              bg-slate-50/70
+              bg-slate-50
               shadow-[0_0_0_1px_rgba(59,130,246,0.06),0_0_25px_rgba(59,130,246,0.10)]
-              backdrop-blur-xl
 
               dark:border-blue-400/25
-              dark:bg-slate-900/55
+              dark:bg-slate-900
               dark:shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_0_30px_rgba(59,130,246,0.12)]
             "
           >
+
             {/* -------------------------------------------------
                 Subtle top highlight
                 ------------------------------------------------- */}
@@ -312,21 +304,17 @@ export default function DashboardClientView({ session }) {
               "
             />
 
-            {tabs.map((tab) => {
+            {tabs.map((tab, index) => {
+              const isActive = activeTab === tab.id;
+
               // =================================================
               // REPORTS TAB
               // =================================================
               if (tab.id === "Reports") {
-                const isActive = activeTab === "Reports";
-
                 return (
                   <div
                     key={tab.id}
-                    className="
-                      group
-                      relative
-                      flex-1
-                    "
+                    className="group relative flex-1"
                   >
                     <button
                       onClick={() => {
@@ -335,14 +323,14 @@ export default function DashboardClientView({ session }) {
                       }}
                       className={`
                         relative
-                        flex  
+                        flex
                         h-14
                         w-full
                         items-center
                         justify-center
                         gap-2.5
                         px-4
-                        text-sm
+                        text-[15px]
                         font-semibold
                         transition-all
                         duration-200
@@ -350,12 +338,12 @@ export default function DashboardClientView({ session }) {
                         ${
                           isActive
                             ? "text-blue-600 dark:text-blue-400"
-                            : "text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                            : "text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
                         }
                       `}
                     >
-                      {/* Icon */}
-                      <tab.icon
+                      {/* Reports icon */}
+                      <FileText
                         size={16}
                         strokeWidth={2}
                         className={`
@@ -364,14 +352,14 @@ export default function DashboardClientView({ session }) {
 
                           ${
                             isActive
-                              ? "text-blue-500 drop-shadow-[0_0_7px_rgba(59,130,246,0.9)]"
-                              : "text-slate-400 dark:text-slate-500"
+                              ? "text-blue-500 drop-shadow-[0_0_7px_rgba(59,130,246,0.7)]"
+                              : "text-blue-500/80 group-hover:text-blue-500 dark:text-blue-400/80 dark:group-hover:text-blue-400"
                           }
                         `}
                       />
 
-                      {/* Label */}
-                      <span>{tab.id}</span>
+                      {/* Reports label */}
+                      <span>Reports</span>
 
                       {/* Dropdown arrow */}
                       <ChevronDown
@@ -383,20 +371,14 @@ export default function DashboardClientView({ session }) {
                           ${
                             isActive
                               ? "text-blue-500"
-                              : "text-slate-400 dark:text-slate-500"
+                              : "text-blue-500/80 group-hover:text-blue-500 dark:text-blue-400/80 dark:group-hover:text-blue-400"
                           }
                         `}
                       />
 
                       {/* Active indicator */}
                       {isActive && (
-                        <motion.div
-                          layoutId="activeTabIndicator"
-                          transition={{
-                            type: "spring",
-                            stiffness: 500,
-                            damping: 35,
-                          }}
+                        <div
                           className="
                             absolute
                             bottom-0
@@ -405,7 +387,7 @@ export default function DashboardClientView({ session }) {
                             h-[2px]
                             rounded-full
                             bg-blue-500
-                            shadow-[0_0_8px_rgba(59,130,246,0.95)]
+                            shadow-[0_0_8px_rgba(59,130,246,0.8)]
                           "
                         />
                       )}
@@ -419,7 +401,7 @@ export default function DashboardClientView({ session }) {
                         invisible
                         absolute
                         left-1/2
-                        top-[calc(100%+10px)]
+                        top-[calc(100%+8px)]
                         z-50
                         w-[260px]
                         -translate-x-1/2
@@ -427,7 +409,7 @@ export default function DashboardClientView({ session }) {
                         rounded-xl
                         border
                         border-blue-300/40
-                        bg-white/95
+                        bg-white
                         p-2
                         opacity-0
                         shadow-[0_20px_50px_rgba(15,23,42,0.18)]
@@ -440,25 +422,29 @@ export default function DashboardClientView({ session }) {
                         group-hover:opacity-100
 
                         dark:border-blue-400/25
-                        dark:bg-slate-900/95
+                        dark:bg-slate-900
                         dark:shadow-[0_20px_50px_rgba(0,0,0,0.35)]
                       "
                     >
+                      {/* Dropdown heading */}
                       <div className="px-3 pb-2 pt-1">
                         <p
                           className="
-                            text-[12px]
+                            text-[11px]
                             font-bold
-                          
-                            tracking-[0.18em]
+                            uppercase
+                            tracking-[0.15em]
                             text-slate-400
+                            dark:text-slate-500
                           "
                         >
                           Explore reports by
                         </p>
                       </div>
 
-                      {/* Countries */}
+                      {/* -------------------------------------------------
+                          Countries
+                          ------------------------------------------------- */}
                       <button
                         onClick={() => {
                           handleTabChange("Reports");
@@ -486,7 +472,9 @@ export default function DashboardClientView({ session }) {
                         Countries
                       </button>
 
-                      {/* ISPs */}
+                      {/* -------------------------------------------------
+                          ISPs
+                          ------------------------------------------------- */}
                       <button
                         onClick={() => {
                           handleTabChange("Reports");
@@ -522,8 +510,6 @@ export default function DashboardClientView({ session }) {
               // =================================================
               // NORMAL TABS
               // =================================================
-              const isActive = activeTab === tab.id;
-
               return (
                 <button
                   key={tab.id}
@@ -536,25 +522,26 @@ export default function DashboardClientView({ session }) {
                     items-center
                     justify-center
                     gap-2.5
-                    border-r
-                    border-blue-200/40
                     px-4
                     text-[15px]
                     font-semibold
                     transition-all
                     duration-200
-                    last:border-r-0
 
-                    dark:border-blue-400/15
+                    ${
+                      index < tabs.length - 1
+                        ? "border-r border-blue-200/40 dark:border-blue-400/15"
+                        : ""
+                    }
 
                     ${
                       isActive
                         ? "text-blue-600 dark:text-blue-400"
-                        : "text-slate-700 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400"
+                        : "text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
                     }
                   `}
                 >
-                  {/* Icon */}
+                  {/* Tab icon */}
                   <tab.icon
                     size={16}
                     strokeWidth={2}
@@ -564,34 +551,28 @@ export default function DashboardClientView({ session }) {
 
                       ${
                         isActive
-                          ? "text-blue-500 drop-shadow-[0_0_7px_rgba(59,130,246,0.9)]"
+                          ? "text-blue-500 drop-shadow-[0_0_7px_rgba(59,130,246,0.7)]"
                           : "text-slate-400 dark:text-slate-500"
                       }
                     `}
                   />
 
-                  {/* Label */}
+                  {/* Tab label */}
                   <span>{tab.id}</span>
 
                   {/* Active indicator */}
                   {isActive && (
-                    <motion.div
-                      layoutId="activeTabIndicator"
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 35,
-                      }}
-                      // className="
-                      //   absolute
-                      //   bottom-0
-                      //   left-6
-                      //   right-6
-                      //   h-[2px]
-                      //   rounded-full
-                      //   bg-blue-500
-                      //   shadow-[0_0_8px_rgba(59,130,246,0.95)]
-                      // "
+                    <div
+                      className="
+                        absolute
+                        bottom-0
+                        left-6
+                        right-6
+                        h-[2px]
+                        rounded-full
+                        bg-blue-500
+                        shadow-[0_0_8px_rgba(59,130,246,0.8)]
+                      "
                     />
                   )}
                 </button>
@@ -604,53 +585,50 @@ export default function DashboardClientView({ session }) {
       {/* =====================================================
           TAB CONTENT
           ===================================================== */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={`${activeTab}-${reportInitialMode}`}
-          initial={{
-            opacity: 0,
-            y: 10,
-          }}
-          animate={{
-            opacity: 1,
-            y: 0,
-          }}
-          exit={{
-            opacity: 0,
-            y: -10,
-          }}
-          transition={{
-            duration: 0.2,
-          }}
-          className="min-h-[calc(100vh-112px)]"
-        >
-          {/* PCAP SUMMARY */}
-          {activeTab === "Pcap Summary" && (
-            <DashboardSummary data={data.summary} />
-          )}
+      <div className="min-h-[calc(100vh-112px)]">
 
-          {/* TRAFFIC DISTRIBUTION */}
-          {activeTab === "Traffic Distribution" && (
-            <TrafficDistribution data={data.traffic_distribution} />
-          )}
+        {/* -----------------------------------------------------
+            PCAP SUMMARY
+            ----------------------------------------------------- */}
+        {activeTab === "Pcap Summary" && (
+          <DashboardSummary data={data.summary} />
+        )}
 
-          {/* IP SEARCH */}
-          {activeTab === "IP Search" && <IPSearch />}
+        {/* -----------------------------------------------------
+            TRAFFIC DISTRIBUTION
+            ----------------------------------------------------- */}
+        {activeTab === "Traffic Distribution" && (
+          <div className="mx-6">
+          <TrafficDistribution
+            data={data.traffic_distribution}
+          />
+          </div>
+        )}
 
-          {/* PCAP INSIGHTS */}
-          {activeTab === "Pcap Insights" && (
-            <DashboardStats stats={data.stats_details} />
-          )}
+        {/* -----------------------------------------------------
+            IP SEARCH
+            ----------------------------------------------------- */}
+        {activeTab === "IP Search" && <IPSearch />}
 
-          {/* REPORTS */}
-          {activeTab === "Reports" && (
-            <DashboardReports
-              initialMode={reportInitialMode}
-              session={session}
-            />
-          )}
-        </motion.div>
-      </AnimatePresence>
+        {/* -----------------------------------------------------
+            PCAP INSIGHTS
+            ----------------------------------------------------- */}
+        {activeTab === "Pcap Insights" && (
+          <DashboardStats
+            stats={data.stats_details}
+          />
+        )}
+
+        {/* -----------------------------------------------------
+            REPORTS
+            ----------------------------------------------------- */}
+        {activeTab === "Reports" && (
+          <DashboardReports
+            initialMode={reportInitialMode}
+            session={session}
+          />
+        )}
+      </div>
     </div>
   );
 }
