@@ -910,27 +910,23 @@
                 exit={{ scale: 0.95, opacity: 0 }}
                 transition={{ type: "spring", duration: 0.3 }}
                 className="bg-card border-2 border-theme p-8 max-w-md w-full relative shadow-2xl flex flex-col items-center text-center rounded-none"
-              >
-                <div className="w-16 h-16 bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center mb-6 rounded-none">
-                  <Shield size={32} className="animate-pulse" />
-                </div>
-                
+              >    
                 <h3 className="text-xl font-black text-foreground uppercase tracking-tight mb-4">
                   PDF Securely Encrypted
                 </h3>
                 
                 <div className="space-y-4 text-left w-full mb-8">
                   <p className="text-[14px] text-slate-500 font-medium leading-relaxed text-center">
-                    To open the downloaded report, please use your dynamic PDF password.
+                    To open the downloaded report, please use PDF password.
                   </p>
                   <div className="bg-slate-500/5 border border-theme p-4 text-[12px] font-black text-foreground/90 uppercase tracking-wider space-y-2 text-center rounded-none">
                     <div className="text-blue-500">Password Formula:</div>
                     <div className="text-[13px] lowercase font-mono bg-card px-3 py-2 border border-theme inline-block select-all whitespace-nowrap">
-                      username(first 5) + password(first 5)
+                      username(first 5) + @ + password(first 5)
                     </div>
                   </div>
-                  <p className="text-[11px] text-slate-400 italic text-center font-medium leading-normal">
-                    Example: If username is <strong>admin1</strong> and password is <strong>password</strong>, the PDF password is <strong className="font-mono not-italic text-blue-500">adminpassw</strong>.
+                  <p className="text-[11px] text-slate-600 italic text-center font-medium leading-normal">
+                    Example: If username is <strong>admin1</strong> and password is <strong>password</strong>, the PDF password is <strong className="font-mono not-italic text-blue-500">admin@passw</strong>.
                   </p>
                 </div>
 
