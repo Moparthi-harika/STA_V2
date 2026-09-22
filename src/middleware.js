@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 // This creates the Next.js middleware and wraps it with Auth.js.
 //becuase Auth.js checks the request and makes authentication information available as: req.auth
 //So you can use:  req.auth?.user , req.auth?.user?.roles, req.auth?.error
+
 export const middleware = auth((req) => {
   console.log("middleware started");
   // req is the incoming request. nextUrl contains information about the URL being requested.
@@ -42,6 +43,7 @@ export const middleware = auth((req) => {
 
   //If Auth.js reports RefreshTokenError, redirect the user to /auth/force-logout.
   // The pathname check prevents redirecting to the same logout page repeatedly.
+  
   if(
       req.auth?.error === "RefreshTokenError" &&
       pathname !== "/auth/force-logout"
