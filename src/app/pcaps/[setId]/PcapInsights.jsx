@@ -910,19 +910,17 @@ const RecordTypeBadge = ({
       >
         {recordType}
       </button>
+<div
+  id={tooltipId}
+  role="tooltip"
+  className={`absolute z-[100] top-1/2 -translate-y-1/2 right-full mr-3 w-72 origin-right rounded-xl border shadow-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 transition-all duration-200 ${
+    open
+      ? "opacity-100 translate-x-0 scale-100 pointer-events-auto"
+      : "opacity-0 translate-x-2 scale-95 pointer-events-none"
+  }`}
+>
 
-      <div
-        id={tooltipId}
-        role="tooltip"
-        className={`absolute z-[100] top-1/2 -translate-y-1/2 left-full ml-3 w-72 origin-left rounded-xl border shadow-xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 transition-all duration-200 ${
-          open
-            ? "opacity-100 translate-x-0 scale-100 pointer-events-auto"
-            : "opacity-0 -translate-x-2 scale-95 pointer-events-none"
-        }`}
-      >
-
-        <span className="absolute top-1/2 -left-[7px] -translate-y-1/2 w-3 h-3 rotate-45 bg-white dark:bg-slate-800 border-l border-b border-slate-200 dark:border-slate-700" />
-
+<span className="absolute top-1/2 -right-[7px] -translate-y-1/2 w-3 h-3 rotate-45 bg-white dark:bg-slate-800 border-r border-t border-slate-200 dark:border-slate-700" />
         <div className="relative px-4 py-3">
 
           <div className="flex items-baseline gap-1.5 mb-1.5">
@@ -1522,65 +1520,46 @@ export default function PcapInsights({
 
           {/* URLS */}
 
-          {urls.length >
-          0 ? (
-            <PaginatedTable
-              data={urls}
-              title="URLs"
-              accent="cyan"
-              sectionKey="urls"
-              headers={[
-                {
-                  label:
-                    "Resource URL / Path",
-                  className:
-                    "w-[600px]",
-                },
-                {
-                  label:
-                    "Hits",
-                },
-              ]}
-              renderRow={(
-                url
-              ) => (
-                <>
-                  <td
-                    className="px-8 py-4 max-w-xl truncate text-[14px] text-foreground"
-                    title={
-                      url.label
-                    }
-                  >
-                    {
-                      url.label
-                    }
-                  </td>
+          <PaginatedTable
+            data={urls}
+            title="URLs"
+            accent="cyan"
+            sectionKey="urls"
+            headers={[
+              {
+                label:
+                  "Resource URL / Path",
+                className:
+                  "w-[600px]",
+              },
+              {
+                label:
+                  "Hits",
+              },
+            ]}
+            renderRow={(
+              url
+            ) => (
+              <>
+                <td
+                  className="px-8 py-4 max-w-xl truncate text-[14px] text-foreground"
+                  title={
+                    url.label
+                  }
+                >
+                  {
+                    url.label
+                  }
+                </td>
 
-                  <td className="px-8 py-4 text-[14px] font-bold text-cyan-600 dark:text-cyan-400">
-                    {
-                      url.value
-                    }
-                  </td>
-                </>
-              )}
-            />
-          ) : (
-       <div className="flex flex-col items-center justify-center bg-card border border-slate-200/80 dark:border-slate-700/70 rounded-xl p-10 text-slate-500 gap-3 shadow-sm">
-
-              <div className="w-10 h-10 rounded-lg bg-cyan-100 dark:bg-cyan-500/15 border border-cyan-300 dark:border-cyan-500/30 flex items-center justify-center">
-                <Link2
-                  size={18}
-                  className="text-cyan-600 dark:text-cyan-400"
-                />
-              </div>
-
-              <span className="text-sm">
-                No URL data
-                available.
-              </span>
-
-            </div>
-          )}
+                <td className="px-8 py-4 text-[14px] font-bold text-cyan-600 dark:text-cyan-400">
+                  {
+                    url.value
+                  }
+                </td>
+              </>
+            )}
+          />
 
           {/* FTP */}
 

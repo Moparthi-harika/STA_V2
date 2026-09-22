@@ -378,16 +378,16 @@
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.95, opacity: 0 }}
-                className="w-full h-full bg-card border border-theme shadow-2xl rounded-none overflow-hidden relative flex flex-col"
+                className="w-full h-full bg-card border border-theme shadow-2xl rounded-2xl overflow-hidden relative flex flex-col"
               >
-                <div className="px-10 py-6 border-b border-theme bg-card flex items-center justify-between z-10">
+                <div className="px-10 py-5 border-b border-theme bg-card flex items-center justify-between z-10 shrink-0">
                   <div className="flex items-center gap-4">
-                    <div className="p-2 bg-blue-600/10 rounded-none">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600/10">
                       <Globe size={24} className="text-blue-600" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-black text-foreground uppercase tracking-tight">{selectedItem?.name}</h2>
-                      <p className="text-[10px] text-slate-400 font-black tracking-widest mt-0.5">IP Geo Distribution</p>
+                      <h2 className="text-lg font-black text-foreground  tracking-wide leading-none">{selectedItem?.name}</h2>
+                      <p className="text-[12px] text-slate-500 font-bold  tracking-[0.18em] mt-2">IP Geo Distribution</p>
                     </div>
                   </div>
                   <button 
@@ -401,7 +401,10 @@
                 <div className="flex-1 relative">
                   <WorldMapLeaflet 
                     externalIps={detailsData} 
-                    mode="pcap"
+                    mode="reports"
+                    fallbackCountry={discoveryMode === "country" ? selectedCountryDisplayName : undefined}
+                    reportLabel={discoveryMode === "country" ? selectedCountryDisplayName : selectedIspDisplayName}
+                    reportType={discoveryMode}
                     onIpClick={(ip) => {
                       handleIpSelect(ip);
                       setIsMapOpen(false);

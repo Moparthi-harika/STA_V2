@@ -13,6 +13,7 @@ import { getCountryDisplayName, getCountryCode } from '@/constants/countryMappin
 import PropTypes from 'prop-types';
 
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const ZoomControl = dynamic(() => import('react-leaflet').then(mod => mod.ZoomControl), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
 const CircleMarker = dynamic(() => import('react-leaflet').then(mod => mod.CircleMarker), { ssr: false });
 const Tooltip = dynamic(() => import('react-leaflet').then(mod => mod.Tooltip), { ssr: false });
@@ -36,63 +37,43 @@ function MapViewportListener({ setViewport }) {
   useEffect(() => {
     const updateViewport = () => {
       const bounds = map.getBounds();
+      const size = map.getSize();
+
       setViewport({
         zoom: map.getZoom(),
         north: bounds.getNorth(),
         south: bounds.getSouth(),
         east: bounds.getEast(),
-        west: bounds.getWest()
+        west: bounds.getWest(),
+        width: size.x,
+        height: size.y
       });
     };
 
     updateViewport();
-    map.on('moveend zoomend', updateViewport);
-    return () => map.off('moveend zoomend', updateViewport);
+    map.on('moveend zoomend resize', updateViewport);
+    return () => map.off('moveend zoomend resize', updateViewport);
   }, [map, setViewport]);
 
   return null;
 }
 
-function MapBoundsHelper({ ips, mode }) {
-  const map = useMap();
-  useEffect(() => {
-    if (mode === 'reports' && ips && ips.length > 0) {
-      const validIps = ips.filter(ip => ip.latitude && ip.longitude);
-      if (validIps.length > 0) {
-        const bounds = validIps.map(ip => [ip.latitude, ip.longitude]);
-        map.fitBounds(bounds, { padding: [100, 100], maxZoom: 5 });
-      }
-    }
-  }, [ips, mode, map]);
-  return null;
-}
-
-function PcapFocusController({ focusCluster, mode }) {
+function PcapDrillDownController({ focusRequest, mode }) {
   const map = useMap();
 
   useEffect(() => {
-    if (mode !== 'pcap' || !focusCluster) return;
+    if (mode !== 'pcap' || !focusRequest) return;
 
-    const focusIps = focusCluster.focusIps || focusCluster.ips || [];
-    const bounds = focusIps
-      .filter(hasCoordinates)
-      .map((ip) => [Number(ip.latitude), Number(ip.longitude)]);
+    const currentZoom = map.getZoom();
+    const nextZoom = getPcapDrillDownZoom(currentZoom);
 
-    if (bounds.length > 1) {
-      map.flyToBounds(bounds, {
-        padding: [60, 60],
-        maxZoom: 12,
-        duration: 0.8,
-        easeLinearity: 0.25
-      });
-      return;
-    }
+    if (nextZoom <= currentZoom) return;
 
-    map.flyTo([focusCluster.lat, focusCluster.lng], 12, {
-      duration: 0.8,
-      easeLinearity: 0.25
+    map.flyTo([focusRequest.lat, focusRequest.lng], nextZoom, {
+      duration: 0.7,
+      easeLinearity: 0.2
     });
-  }, [focusCluster, map, mode]);
+  }, [focusRequest, map, mode]);
 
   return null;
 }
@@ -113,32 +94,140 @@ function EnsureTopPane() {
         p.style.pointerEvents = 'auto';
       }
     } catch (e) {
-      // ignore
+
     }
   }, [map]);
   return null;
 }
 
+function MapResetControl({ L, center, zoom }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!L || !map) return;
+
+    const control = L.control({ position: 'bottomright' });
+
+    control.onAdd = () => {
+      const container = L.DomUtil.create(
+        'div',
+        'leaflet-bar map-controls-stack'
+      );
+
+      // =========================
+      // ZOOM IN
+      // =========================
+      const zoomIn = L.DomUtil.create(
+        'a',
+        'map-control-button',
+        container
+      );
+
+      zoomIn.href = '#';
+      zoomIn.title = 'Zoom in';
+      zoomIn.setAttribute('aria-label', 'Zoom in');
+      zoomIn.setAttribute('role', 'button');
+      zoomIn.innerHTML = '+';
+
+      L.DomEvent.on(zoomIn, 'click', (event) => {
+        L.DomEvent.stop(event);
+        map.zoomIn();
+      });
+
+      // =========================
+      // ZOOM OUT
+      // =========================
+      const zoomOut = L.DomUtil.create(
+        'a',
+        'map-control-button',
+        container
+      );
+
+      zoomOut.href = '#';
+      zoomOut.title = 'Zoom out';
+      zoomOut.setAttribute('aria-label', 'Zoom out');
+      zoomOut.setAttribute('role', 'button');
+      zoomOut.innerHTML = '−';
+
+      L.DomEvent.on(zoomOut, 'click', (event) => {
+        L.DomEvent.stop(event);
+        map.zoomOut();
+      });
+
+      // =========================
+      // RESET MAP
+      // =========================
+      const reset = L.DomUtil.create(
+        'a',
+        'map-control-button map-reset-button',
+        container
+      );
+
+      reset.href = '#';
+      reset.title = 'Reset map view';
+      reset.setAttribute('aria-label', 'Reset map view');
+      reset.setAttribute('role', 'button');
+
+      reset.innerHTML = `
+        <svg
+          viewBox="0 0 24 24"
+          width="16"
+          height="16"
+          aria-hidden="true"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="7.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+          />
+
+          <circle
+            cx="12"
+            cy="12"
+            r="2.5"
+            fill="currentColor"
+          />
+
+          <path
+            d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+        </svg>
+      `;
+
+      L.DomEvent.on(reset, 'click', (event) => {
+        L.DomEvent.stop(event);
+
+        map.flyTo(center, zoom, {
+          duration: 0.5,
+          easeLinearity: 0.2
+        });
+      });
+
+      // Prevent map dragging/scrolling when using controls
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.disableScrollPropagation(container);
+
+      return container;
+    };
+
+    control.addTo(map);
+
+    return () => {
+      control.remove();
+    };
+  }, [L, map, center, zoom]);
+
+  return null;
+}
+const DEFAULT_MAP_CENTER = [25, 20];
 const DELHI_COORDS = [28.6139, 77.2090];
-const FOCUS_IP_RENDER_LIMIT = 180;
-
-// Tailwind class strings for the plain-HTML markers rendered inside Leaflet divIcons.
-// These are static strings (no interpolated class names) so Tailwind's JIT compiler
-// can pick them up and generate the corresponding utility CSS.
-const PCAP_MARKER_BASE_CLASSES =
-  "relative flex items-center justify-center rounded-full border-2 border-white text-white font-black text-[8px] [text-shadow:0_1px_2px_rgba(15,23,42,0.25)] transition-all duration-[250ms] ease-[cubic-bezier(0.2,0.9,0.2,1)] cursor-pointer hover:![transform:translateY(-6px)_scale(1.16)] hover:![box-shadow:0_0_0_8px_rgba(59,130,246,0.18),0_14px_26px_rgba(37,99,235,0.32)] hover:!z-[1000]";
-
-const PCAP_MARKER_FOCUS_CLASSES =
-  "!border-[2.5px] !shadow-[0_0_0_5px_rgba(37,99,235,0.12),0_8px_18px_rgba(30,64,175,0.22)]";
-
-const PCAP_SPRINKLE_ANIM_CLASSES =
-  "will-change-transform animate-[pcap-marker-sprinkle_460ms_cubic-bezier(0.16,1.15,0.28,1)_both]";
-
-const PCAP_SPRINKLE_RING_CLASSES =
-  "absolute inset-0 rounded-full opacity-0 pointer-events-none z-[1] animate-[pcap-sprinkle-ring_520ms_ease-out_both]";
-
-const PCAP_PULSE_CLASSES =
-  "absolute inset-0 rounded-full opacity-40 pointer-events-none z-[1] animate-[pcap-map-pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]";
 
 const SUMMARY_DOT_CLASSES =
   "rounded-full border-2 border-white bg-blue-600 shadow-[0_0_15px_rgba(37,99,235,0.4),0_0_30px_rgba(37,99,235,0.1)] transition-all duration-200 ease-out cursor-pointer animate-[summary-scale-breathe_2s_ease-in-out_infinite] hover:!bg-white hover:![transform:scale(3)] hover:![box-shadow:0_0_50px_rgba(37,99,235,1)] hover:!z-[1000] hover:!border-[2.5px] hover:!border-blue-600";
@@ -155,213 +244,298 @@ const hasCoordinates = (ip) => {
   return Number.isFinite(lat) && Number.isFinite(lng);
 };
 
-const addPreviewIp = (group, ip) => {
-  group.ips.push(ip);
-  if (group.focusIps.length < FOCUS_IP_RENDER_LIMIT) {
-    group.focusIps.push(ip);
-  }
-};
-
-const getPcapGroupStep = (zoomLevel, totalIpCount, visibleIpCount) => {
-  if (totalIpCount <= 1000 && visibleIpCount <= 1000) {
-    if (zoomLevel >= 9) return 0.16;
-    if (zoomLevel >= 7) return 0.34;
-    if (zoomLevel >= 5) return 0.8;
-    if (zoomLevel >= 3) return 2.4;
-    return 5;
-  }
-
-  if (totalIpCount > 10000) {
-    if (zoomLevel >= 10) return 0.16;
-    if (zoomLevel >= 9) return 0.24;
-    if (zoomLevel >= 8) return 0.42;
-    if (zoomLevel >= 7) return 0.72;
-    if (zoomLevel >= 6) return 1.1;
-    if (zoomLevel >= 5) return 1.8;
-    return 5.5;
-  }
-
-  if (zoomLevel >= 9) return 0.22;
-  if (zoomLevel >= 8) return 0.32;
-  if (zoomLevel >= 7) return 0.5;
-  if (zoomLevel >= 6) return 0.85;
-  if (zoomLevel >= 5) return 1.35;
-  if (zoomLevel >= 4) return 2.4;
-  if (zoomLevel >= 3) return 4.2;
-  return 7;
-};
-
 const getPcapMaxPoints = (zoomLevel, totalIpCount) => {
   if (totalIpCount > 10000) {
-    if (zoomLevel >= 9) return 360;
-    if (zoomLevel >= 7) return 300;
-    if (zoomLevel >= 5) return 220;
-    return 140;
+    if (zoomLevel >= 10) return 420;
+    if (zoomLevel >= 8) return 360;
+    if (zoomLevel >= 6) return 300;
+    if (zoomLevel >= 4) return 240;
+    return 180;
   }
 
   if (totalIpCount > 3000) {
-    if (zoomLevel >= 8) return 340;
-    if (zoomLevel >= 6) return 280;
-    return 190;
+    if (zoomLevel >= 9) return 420;
+    if (zoomLevel >= 7) return 360;
+    if (zoomLevel >= 5) return 300;
+    return 240;
   }
 
   return 420;
 };
 
-const getViewportPadding = (zoomLevel) => {
-  if (zoomLevel >= 9) return 0.8;
-  if (zoomLevel >= 7) return 1.8;
-  if (zoomLevel >= 5) return 4;
-  return 0;
+const getPcapScreenSpacing = (zoomLevel, totalIpCount) => {
+  let spacing;
+
+  if (zoomLevel >= 11) spacing = 22;
+  else if (zoomLevel >= 9) spacing = 28;
+  else if (zoomLevel >= 7) spacing = 36;
+  else if (zoomLevel >= 5) spacing = 46;
+  else if (zoomLevel >= 3) spacing = 58;
+  else spacing = 72;
+
+  if (totalIpCount > 10000 && zoomLevel < 7) spacing += 10;
+  else if (totalIpCount > 3000 && zoomLevel < 5) spacing += 6;
+
+  return spacing;
 };
 
-const isInsideViewport = (ip, viewport, zoomLevel) => {
-  if (!viewport || zoomLevel < 5) return true;
+const clampLatitudeForProjection = (lat) =>
+  Math.max(-85.05112878, Math.min(85.05112878, lat));
 
-  const pad = getViewportPadding(zoomLevel);
+const mercatorY = (lat) => {
+  const radians = clampLatitudeForProjection(lat) * Math.PI / 180;
+  return (1 - Math.log(Math.tan(radians) + 1 / Math.cos(radians)) / Math.PI) / 2;
+};
+
+const getViewportLongitudeInfo = (west, east) => {
+  let normalizedWest = west;
+  let normalizedEast = east;
+
+  while (normalizedEast < normalizedWest) {
+    normalizedEast += 360;
+  }
+
+  const span = Math.max(normalizedEast - normalizedWest, 0.000001);
+  return { west: normalizedWest, east: normalizedEast, span };
+};
+
+const getLongitudeInViewport = (lng, west, east) => {
+  const info = getViewportLongitudeInfo(west, east);
+  let normalized = lng;
+
+  while (normalized < info.west) normalized += 360;
+  while (normalized > info.east) normalized -= 360;
+
+  return normalized;
+};
+
+const isInsideViewport = (ip, viewport) => {
+  if (!viewport) return true;
+
   const lat = Number(ip.latitude);
   const lng = Number(ip.longitude);
 
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+
+  const latPad = Math.max(
+    0.5,
+    Math.abs(viewport.north - viewport.south) * 0.04
+  );
+  const longitudeInfo = getViewportLongitudeInfo(viewport.west, viewport.east);
+  const lngPad = Math.max(0.5, longitudeInfo.span * 0.04);
+  const adjustedLng = getLongitudeInViewport(lng, viewport.west, viewport.east);
+
   return (
-    lat >= viewport.south - pad &&
-    lat <= viewport.north + pad &&
-    lng >= viewport.west - pad &&
-    lng <= viewport.east + pad
+    lat >= viewport.south - latPad &&
+    lat <= viewport.north + latPad &&
+    adjustedLng >= longitudeInfo.west - lngPad &&
+    adjustedLng <= longitudeInfo.east + lngPad
   );
 };
 
-const groupIpsByCountry = (ips) => {
-  const groups = new Map();
+const getScreenPosition = (lat, lng, viewport) => {
+  if (!viewport || !viewport.width || !viewport.height) return null;
 
-  ips.forEach((ip) => {
-    const lat = Number(ip.latitude);
-    const lng = Number(ip.longitude);
-    const key = ip.country || "Unknown";
-    const existing = groups.get(key);
+  const adjustedLng = getLongitudeInViewport(lng, viewport.west, viewport.east);
+  const longitudeInfo = getViewportLongitudeInfo(viewport.west, viewport.east);
+  const x = ((adjustedLng - longitudeInfo.west) / longitudeInfo.span) * viewport.width;
 
-    if (existing) {
-      existing.latTotal += lat;
-      existing.lngTotal += lng;
-      existing.count += 1;
-      existing.totalPackets += ip.packet_count || 0;
-      addPreviewIp(existing, ip);
-      return;
-    }
+  const northY = mercatorY(viewport.north);
+  const southY = mercatorY(viewport.south);
+  const pointY = mercatorY(lat);
+  const ySpan = Math.max(southY - northY, 0.000001);
 
-    groups.set(key, {
-      id: `country-${key}`,
-      latTotal: lat,
-      lngTotal: lng,
-      count: 1,
-      city: key,
-      country: key,
-      ips: [ip],
-      focusIps: [ip],
-      totalPackets: ip.packet_count || 0
-    });
-  });
+  const y = ((pointY - northY) / ySpan) * viewport.height;
 
-  return Array.from(groups.values()).map((group) => ({
-    ...group,
-    lat: group.latTotal / group.count,
-    lng: group.lngTotal / group.count
-  }));
+  return { x, y };
 };
 
-const groupIpsByGrid = (ips, groupStep) => {
+const createIndividualPcapPoint = (ip, idx) => ({
+  id: `ip-${ip.ip || idx}`,
+  lat: Number(ip.latitude),
+  lng: Number(ip.longitude),
+  city: ip.city || "Unknown",
+  country: ip.country || "Unknown",
+  ips: [ip],
+  count: 1,
+  totalPackets: Number(ip.packet_count) || 0,
+  isExactCoordinateGroup: true,
+  exactCoordinateGroupCount: 1
+});
+
+/*
+ * IMPORTANT:
+ * Two different concepts are kept separate here:
+ *
+ * 1. Exact-coordinate grouping:
+ *    If multiple IP records have the exact same latitude + longitude,
+ *    they MUST become one point and one details card.
+ *
+ * 2. Screen-space clustering:
+ *    At lower zoom levels we may visually cluster nearby exact-coordinate
+ *    groups for performance. This is only a temporary map cluster. It is
+ *    NOT treated as one real location. Clicking it drills down instead of
+ *    opening a combined card for nearby locations.
+ */
+const groupIpsByExactCoordinates = (ips) => {
   const groups = new Map();
 
-  ips.forEach((ip) => {
+  ips.forEach((ip, idx) => {
     const lat = Number(ip.latitude);
     const lng = Number(ip.longitude);
-    const key = `${Math.floor(lat / groupStep)}:${Math.floor(lng / groupStep)}`;
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    const key = `${lat},${lng}`;
     const existing = groups.get(key);
 
     if (existing) {
-      existing.latTotal += lat;
-      existing.lngTotal += lng;
+      existing.ips.push(ip);
       existing.count += 1;
-      existing.totalPackets += ip.packet_count || 0;
-      addPreviewIp(existing, ip);
+      existing.totalPackets += Number(ip.packet_count) || 0;
       return;
     }
 
     groups.set(key, {
-      id: `group-${key}`,
-      latTotal: lat,
-      lngTotal: lng,
-      count: 1,
+      id: `exact-${key}`,
+      lat,
+      lng,
       city: ip.city || "Unknown",
       country: ip.country || "Unknown",
       ips: [ip],
-      focusIps: [ip],
-      totalPackets: ip.packet_count || 0
+      count: 1,
+      totalPackets: Number(ip.packet_count) || 0,
+      firstIndex: idx,
+      isExactCoordinateGroup: true,
+      exactCoordinateGroupCount: 1
     });
   });
 
-  return Array.from(groups.values()).map((group) => ({
-    ...group,
-    lat: group.latTotal / group.count,
-    lng: group.lngTotal / group.count
-  }));
+  return Array.from(groups.values()).sort(
+    (a, b) => a.firstIndex - b.firstIndex
+  );
+};
+
+const groupIpsByScreenSpacing = (coordinateGroups, viewport, spacing) => {
+  if (!viewport || !viewport.width || !viewport.height) {
+    return [];
+  }
+
+  const groups = new Map();
+
+  coordinateGroups.forEach((coordinateGroup, idx) => {
+    const lat = Number(coordinateGroup.lat);
+    const lng = Number(coordinateGroup.lng);
+    const screen = getScreenPosition(lat, lng, viewport);
+
+    if (!screen) return;
+
+    const cellX = Math.floor(screen.x / spacing);
+    const cellY = Math.floor(screen.y / spacing);
+    const key = `${cellX}:${cellY}`;
+
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.latTotal += lat * coordinateGroup.count;
+      existing.lngTotal += lng * coordinateGroup.count;
+      existing.count += coordinateGroup.count;
+      existing.totalPackets += coordinateGroup.totalPackets;
+      existing.ips.push(...coordinateGroup.ips);
+      existing.exactCoordinateGroupCount += 1;
+      existing.isExactCoordinateGroup = false;
+      return;
+    }
+
+    groups.set(key, {
+      id: `screen-${key}`,
+      latTotal: lat * coordinateGroup.count,
+      lngTotal: lng * coordinateGroup.count,
+      count: coordinateGroup.count,
+      city: coordinateGroup.city || "Unknown",
+      country: coordinateGroup.country || "Unknown",
+      ips: [...coordinateGroup.ips],
+      totalPackets: coordinateGroup.totalPackets,
+      firstIndex: idx,
+      isExactCoordinateGroup: true,
+      exactCoordinateGroupCount: 1
+    });
+  });
+
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      lat: group.latTotal / Math.max(group.count, 1),
+      lng: group.lngTotal / Math.max(group.count, 1)
+    }))
+    .sort((a, b) => a.firstIndex - b.firstIndex);
 };
 
 const buildPcapMapPoints = (ips, zoomLevel, viewport) => {
   const totalIpCount = ips.length;
+  if (!totalIpCount) return [];
+
+  const visibleIps = viewport
+    ? ips.filter((ip) => isInsideViewport(ip, viewport))
+    : ips;
+
+  if (!visibleIps.length) return [];
+
+  /*
+   * First and most importantly, collapse only records that have the
+   * EXACT same coordinates. This prevents the "1 + 1 on top of each
+   * other" problem at high zoom.
+   */
+  const exactCoordinateGroups = groupIpsByExactCoordinates(visibleIps);
+  if (!exactCoordinateGroups.length) return [];
+
+  /*
+   * At the deepest zoom level we do NOT perform screen clustering.
+   * Every exact coordinate remains its own marker. Therefore:
+   *
+   *   same coordinates -> one marker containing all IPs
+   *   nearby coordinates -> separate markers
+   */
+  if (zoomLevel >= 12) {
+    return exactCoordinateGroups;
+  }
+
   const maxPoints = getPcapMaxPoints(zoomLevel, totalIpCount);
 
-  if (totalIpCount > 10000 && zoomLevel < 5) {
-    return groupIpsByCountry(ips).slice(0, maxPoints);
+  let spacing = getPcapScreenSpacing(zoomLevel, totalIpCount);
+  let groupedPoints = groupIpsByScreenSpacing(
+    exactCoordinateGroups,
+    viewport,
+    spacing
+  );
+
+  if (!groupedPoints.length) {
+    return exactCoordinateGroups.slice(0, maxPoints);
   }
 
-  const visibleIps = ips.filter((ip) => isInsideViewport(ip, viewport, zoomLevel));
-  let groupStep = getPcapGroupStep(zoomLevel, totalIpCount, visibleIps.length);
-
-  if (!groupStep) {
-    const renderIps = visibleIps.slice(0, maxPoints);
-    return renderIps.map((ip, idx) => ({
-      id: `ip-${ip.ip || idx}`,
-      lat: Number(ip.latitude),
-      lng: Number(ip.longitude),
-      city: ip.city || "Unknown",
-      country: ip.country || "Unknown",
-      ips: [ip],
-      count: 1,
-      totalPackets: ip.packet_count || 0
-    }));
-  }
-
-  let groupedPoints = groupIpsByGrid(visibleIps, groupStep);
-
-  while (groupedPoints.length > maxPoints) {
-    groupStep *= 1.55;
-    groupedPoints = groupIpsByGrid(visibleIps, groupStep);
+  let safety = 0;
+  while (groupedPoints.length > maxPoints && safety < 12) {
+    spacing *= 1.18;
+    groupedPoints = groupIpsByScreenSpacing(
+      exactCoordinateGroups,
+      viewport,
+      spacing
+    );
+    safety += 1;
   }
 
   return groupedPoints;
 };
 
-const buildFocusedPcapPoints = (ips) => {
-  return ips
-    .filter(hasCoordinates)
-    .slice(0, FOCUS_IP_RENDER_LIMIT)
-    .map((ip, idx) => ({
-      id: `focus-${ip.ip || idx}`,
-      lat: Number(ip.latitude),
-      lng: Number(ip.longitude),
-      city: ip.city || "Unknown",
-      country: ip.country || "Unknown",
-      ips: [ip],
-      focusIps: [ip],
-      count: 1,
-      isFocusedReveal: true,
-      totalPackets: ip.packet_count || 0
-    }));
+const getPcapDrillDownZoom = (currentZoom) => {
+  if (currentZoom < 4) return 5;
+  if (currentZoom < 6) return 7;
+  if (currentZoom < 8) return 9;
+  if (currentZoom < 10) return 11;
+  if (currentZoom < 12) return 12;
+  return currentZoom;
 };
 
-/* ---------------------------------------------------------------------- */
-/* Signal color system                                                     */
-/* ---------------------------------------------------------------------- */
 const SIGNAL_COLORS = {
   cool: { marker: '#22d3ee', halo: 'rgba(34, 211, 238, 0.24)', pulse: 'rgba(34, 211, 238, 0.4)', line: '#06b6d4', shadow: 'rgba(8, 145, 178, 0.4)' },
   mid: { marker: '#34d399', halo: 'rgba(52, 211, 153, 0.24)', pulse: 'rgba(52, 211, 153, 0.4)', line: '#059669', shadow: 'rgba(5, 150, 105, 0.4)' },
@@ -369,13 +543,9 @@ const SIGNAL_COLORS = {
   hot: { marker: '#f43f5e', halo: 'rgba(244, 63, 94, 0.26)', pulse: 'rgba(244, 63, 94, 0.42)', line: '#e11d48', shadow: 'rgba(225, 29, 72, 0.44)' }
 };
 
-// Builds a layered "neon bloom" box-shadow used by pcap/reports markers -
-// a tight halo ring, a wider soft glow, and a grounding drop shadow.
 const buildGlowShadow = (style) =>
   `0 0 0 4px ${style.halo}, 0 0 26px 7px ${style.pulse}, 0 8px 18px ${style.shadow}`;
 
-// Per-cluster tiers (pcap / reports groupings - counts are usually small,
-// tens to low hundreds).
 const getPcapPointStyle = (count) => {
   if (count >= 200) return SIGNAL_COLORS.hot;
   if (count >= 10) return SIGNAL_COLORS.warm;
@@ -383,18 +553,21 @@ const getPcapPointStyle = (count) => {
   return SIGNAL_COLORS.cool;
 };
 
-// markers in the global mapview 
 const SUMMARY_MARKER_COLOR = '#ff7f50';
 
+const REPORT_MARKER_COLORS = {
+  fill: '#2563eb',
+  shadow: 'rgba(30, 64, 175, 0.30)',
+  hoverShadow: 'rgba(30, 64, 175, 0.38)'
+};
 
 const SUMMARY_MARKER_SIZE = 11;
 const getSummaryMarkerSize = () => SUMMARY_MARKER_SIZE;
 
-// Continent-level labels only.
 const CONTINENT_LABELS = [
   { id: 'north-america', text: 'North\nAmerica', position: [48, -105], className: 'label-large' },
   { id: 'europe', text: 'Europe', position: [53, 15], className: 'label-large' },
-  // { id: 'russia', text: 'RUSSIA', position: [61, 95], className: 'label-large' },
+
   { id: 'africa', text: 'Africa', position: [5, 18], className: 'label-large' },
   { id: 'asia', text: 'Asia', position: [42, 78], className: 'label-large' },
   { id: 'south-america', text: 'South America', position: [-14, -65], className: 'label-large' },
@@ -441,9 +614,6 @@ function ContinentLabels({ theme, L, labels, zoomLevel }) {
   });
 }
 
-/* ---------------------------------------------------------------------- */
-/* Antimeridian handling                                                   */
-/* ---------------------------------------------------------------------- */
 const unwrapRingLongitudes = (ring) => {
   let offset = 0;
   let prevLng = null;
@@ -493,9 +663,6 @@ const sanitizeWorldGeoJSON = (geojson) => {
   };
 };
 
-/* ---------------------------------------------------------------------- */
-/* Land styling                                                            */
-/* ---------------------------------------------------------------------- */
 const LAND_THEME = {
   dark: {
     fill: '#3d5977',
@@ -535,8 +702,6 @@ const getLandStyle = (theme, hovered = false) => {
   };
 };
 
-
-// --- AFTER: classic Leaflet colors ---
 const SUMMARY_LAND_FILL = '#f2efe9';
 const SUMMARY_BORDER_COLOR = '#cfcabd';
 
@@ -551,7 +716,6 @@ const getSummaryLandStyle = () => ({
   smoothFactor: 0
 });
 
-// Flat, not a gradient — matches the stock Leaflet/OSM water tile color.
 const SUMMARY_MAP_BACKGROUND = '#aad3df';
 const formatCompactCount = (count) => {
   const value = Number(count) || 0;
@@ -606,9 +770,6 @@ const findCountryMatch = (featureProperties, countryIndex) => {
   return null;
 };
 
-/* ---------------------------------------------------------------------- */
-/* Country flags                                                           */
-/* ---------------------------------------------------------------------- */
 const GEOJSON_ISO2_KEYS = ['ISO_A2_EH', 'iso_a2_eh', 'ISO_A2', 'iso_a2', 'WB_A2', 'wb_a2'];
 
 const getFeatureIso2 = (properties) => {
@@ -640,10 +801,10 @@ const buildCountryIsoIndex = (worldCountries) => {
 };
 
 const getCountryIso2 = (name, isoIndex) => {
-  // First try COUNTRY_MAPPING which has accurate ISO2 for all formal backend names
+
   const mapped = getCountryCode(name);
   if (mapped) return mapped;
-  // Fallback to GeoJSON index for any unmapped names
+
   if (!name || !isoIndex || !isoIndex.size) return null;
   const key = normalizeForMatch(name);
   if (isoIndex.has(key)) return isoIndex.get(key);
@@ -676,9 +837,6 @@ CountryFlag.propTypes = {
   size: PropTypes.number,
 };
 
-/* ---------------------------------------------------------------------- */
-/* Country centroids — used only for the India border layer placement      */
-/* ---------------------------------------------------------------------- */
 const ringSignedArea = (ring) => {
   let area = 0;
   for (let i = 0, len = ring.length, j = len - 1; i < len; j = i++) {
@@ -723,8 +881,7 @@ const getPolygonCentroid = (geometry) => {
   return null;
 };
 
-
-export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', countryData = [], title }) {
+export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', countryData = [], title, fallbackCountry, reportLabel, reportType }) {
   const { theme } = useTheme();
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedCountry, setSelectedCountry] = useState(null);
@@ -733,7 +890,6 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
   const [worldCountries, setWorldCountries] = useState(null);
   const [zoomLevel, setZoomLevel] = useState(2);
   const [viewport, setViewport] = useState(null);
-  const [focusedPcapCluster, setFocusedPcapCluster] = useState(null);
 
   useEffect(() => {
     import('leaflet').then(leaflet => {
@@ -774,8 +930,9 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
           id: key,
           lat,
           lng,
-          city: ip.city || "Unknown",
-          country: ip.country || "Unknown",
+          city: reportLabel || ip.city || "Unknown",
+          country: reportType === 'isp' ? 'ISP' : (ip.country || fallbackCountry || 'Country'),
+          categoryLabel: reportType === 'isp' ? 'ISP' : 'Country',
           ips: [ip],
           count: 1,
           totalPackets: ip.packets || ip.packet_count || 1
@@ -783,12 +940,9 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
       }
     });
     return Array.from(groups.values());
-  }, [validIps, mode]);
+  }, [fallbackCountry, reportLabel, reportType, validIps, mode]);
 
-  const activeFocusedPcapCluster = useMemo(() => {
-    if (mode !== 'pcap' || !focusedPcapCluster) return null;
-    return focusedPcapCluster;
-  }, [focusedPcapCluster, mode]);
+  const [pcapDrillDownRequest, setPcapDrillDownRequest] = useState(null);
 
   const pcapMapPoints = useMemo(() => {
     if (mode !== 'pcap') return [];
@@ -797,28 +951,21 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
 
   const pcapLinePoints = useMemo(() => {
     if (mode !== 'pcap') return [];
-
-    const maxLines = activeFocusedPcapCluster
-      ? 28
-      : (validIps.length > 10000
-        ? (zoomLevel >= 8 ? 70 : 42)
-        : (zoomLevel >= 8 ? 90 : 60));
-
-    return [...pcapMapPoints]
-      .sort((a, b) => b.count - a.count)
-      .slice(0, maxLines);
-  }, [activeFocusedPcapCluster, mode, pcapMapPoints, validIps.length, zoomLevel]);
+    return pcapMapPoints;
+  }, [mode, pcapMapPoints]);
 
   const pcapMarkerItems = useMemo(() => {
     if (!L || mode !== 'pcap') return [];
 
     return pcapMapPoints.map((point, idx) => {
-      const markerSize = point.isFocusedReveal ? 20 : getPcapMarkerSize(point.count, zoomLevel);
+      const markerSize = getPcapMarkerSize(point.count, zoomLevel);
       const label = point.count.toLocaleString();
       const pointStyle = getPcapPointStyle(point.count);
-      const jumpDelay = point.isFocusedReveal
-        ? Math.min(idx * 18, 520)
-        : Math.abs(Math.round(point.lat * 13 + point.lng * 7)) % 240;
+
+      const jumpDelay = Math.abs(
+        Math.round(point.lat * 13 + point.lng * 7 + idx * 3)
+      ) % 240;
+
       const deltaLng = DELHI_COORDS[1] - point.lng;
       const deltaLat = point.lat - DELHI_COORDS[0];
       const flyMagnitude = Math.max(Math.abs(deltaLng), Math.abs(deltaLat), 1);
@@ -826,20 +973,13 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
       const jitterY = Math.cos(point.lng * 2.1 - point.lat) * 6;
       const sprinkleX = Math.round((deltaLng / flyMagnitude) * 34 + jitterX);
       const sprinkleY = Math.round((deltaLat / flyMagnitude) * 28 + jitterY);
-      const countLabelSizeClass = point.count > 999 ? 'text-[9px]' : 'text-[10px]';
-      const markerClasses = [
-        PCAP_MARKER_BASE_CLASSES,
-        PCAP_SPRINKLE_ANIM_CLASSES,
-        point.isFocusedReveal ? PCAP_MARKER_FOCUS_CLASSES : '',
-        'group'
-      ].filter(Boolean).join(' ');
 
       return {
         point,
         markerSize,
         icon: L.divIcon({
           html: `
-            <div class="pcap-marker ${point.isFocusedReveal ? 'pcap-marker-focus' : ''} pcap-marker-sprinkle group" style="width: ${markerSize}px; height: ${markerSize}px; --sprinkle-x: ${sprinkleX}px; --sprinkle-y: ${sprinkleY}px; background: ${pointStyle.marker}; box-shadow: ${buildGlowShadow(pointStyle)}; animation-delay: ${jumpDelay}ms;">
+            <div class="pcap-marker pcap-marker-sprinkle group" style="width: ${markerSize}px; height: ${markerSize}px; --sprinkle-x: ${sprinkleX}px; --sprinkle-y: ${sprinkleY}px; background: ${pointStyle.marker}; box-shadow: ${buildGlowShadow(pointStyle)}; animation-delay: ${jumpDelay}ms;">
               <div class="pcap-sprinkle-ring" style="background: ${pointStyle.marker};"></div>
               <span style="position: relative; z-index: 2; font-size: ${point.count > 999 ? 9 : 10}px;">${label}</span>
             </div>
@@ -858,9 +998,6 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
   const indiaRenderer = useMemo(() => (L ? L.svg() : null), [L]);
   const worldRenderer = useMemo(() => (L ? L.svg() : null), [L]);
 
-
-  // detail card — the land polygon is static (no hover feedback); only the
-  // per-country marker is interactive.
   const summaryMarkerItems = useMemo(() => {
     if (!L || mode !== 'summary') return [];
 
@@ -876,8 +1013,7 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
         const style = { marker: SUMMARY_MARKER_COLOR };
         const markerSize = getSummaryMarkerSize(entry.count);
         const iso2 = getCountryIso2(entry.name, countryIsoIndex);
-        // Staggers each dot's blink cycle so the whole map doesn't pulse
-        // in lockstep - purely cosmetic, derived from position.
+
         const blinkDelay = (Math.abs(Math.round(lat * 3 + lng * 7)) % 36) / 10;
 
         return {
@@ -895,35 +1031,22 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
       });
   }, [L, mode, countryData, countryIsoIndex]);
 
-  const initialCenter = useMemo(() => {
-    if (mode === 'reports' && externalIps.length > 0) {
-      const validIps = externalIps.filter(ip => ip.latitude && ip.longitude);
-      if (validIps.length > 0) {
-        const avgLat = validIps.reduce((sum, ip) => sum + ip.latitude, 0) / validIps.length;
-        const avgLng = validIps.reduce((sum, ip) => sum + ip.longitude, 0) / validIps.length;
-        return [avgLat, avgLng];
-      }
-    }
-    return [25, 20];
-  }, [mode, externalIps]);
+  const initialCenter = DEFAULT_MAP_CENTER;
 
-  const initialZoom = mode === 'reports' ? 8 : (mode === 'summary' ? 2 : 2.2);
+  const initialZoom = mode === 'summary' ? 2 : 2.2;
 
-  // Drives the theme-dependent Leaflet base-map background via a CSS custom
-  // property, referenced by an arbitrary-value Tailwind class below. The
-  // summary map always uses its own solid ocean-blue backdrop regardless of
-  // the app's light/dark theme toggle - pcap/reports are unaffected.
   const mapContainerStyle = {
-    '--leaflet-bg': mode === 'summary'
-      ? SUMMARY_MAP_BACKGROUND
-      : (theme === 'dark' ? '#091224' : '#d8edf3')
+    '--leaflet-bg': SUMMARY_MAP_BACKGROUND
   };
+  const mapShellClassName = mode === 'reports'
+    ? 'w-full h-full relative z-0 overflow-hidden bg-card [&_.leaflet-container]:!bg-[var(--leaflet-bg)] [&_.continent-label-marker]:!bg-transparent [&_.continent-label-marker]:!border-0 [&_.continent-label-marker]:!shadow-none [&_.leaflet-tooltip]:!bg-card [&_.leaflet-tooltip]:!backdrop-blur-none [&_.leaflet-tooltip]:!border [&_.leaflet-tooltip]:!border-theme [&_.leaflet-tooltip]:!rounded-xl [&_.leaflet-tooltip]:!shadow-[0_20px_50px_rgba(15,23,42,0.18)] [&_.leaflet-tooltip]:!p-0 [&_.leaflet-tooltip]:!text-foreground [&_.leaflet-tooltip]:overflow-hidden [&_.leaflet-grab]:!cursor-pointer [&_.leaflet-dragging_.leaflet-grab]:!cursor-grabbing'
+    : 'w-full h-full relative z-0 rounded-[24px] overflow-hidden border border-theme/70 transition-all duration-300 bg-card shadow-[0_18px_50px_rgba(15,23,42,0.16)] [&_.leaflet-container]:!bg-[var(--leaflet-bg)] [&_.continent-label-marker]:!bg-transparent [&_.continent-label-marker]:!border-0 [&_.continent-label-marker]:!shadow-none [&_.leaflet-tooltip]:!bg-card [&_.leaflet-tooltip]:!backdrop-blur-none [&_.leaflet-tooltip]:!border [&_.leaflet-tooltip]:!border-theme [&_.leaflet-tooltip]:!rounded-xl [&_.leaflet-tooltip]:!shadow-[0_20px_50px_rgba(15,23,42,0.18)] [&_.leaflet-tooltip]:!p-0 [&_.leaflet-tooltip]:!text-foreground [&_.leaflet-tooltip]:overflow-hidden [&_.leaflet-grab]:!cursor-pointer [&_.leaflet-dragging_.leaflet-grab]:!cursor-grabbing';
 
   if (!L) return <div className="w-full h-full bg-slate-900 animate-pulse rounded-none" />;
 
   return (
     <div
-      className="w-full h-full relative z-0 rounded-[24px] overflow-hidden border border-theme/70 transition-all duration-300 bg-card shadow-[0_18px_50px_rgba(15,23,42,0.16)] [&_.leaflet-container]:!bg-[var(--leaflet-bg)] [&_.continent-label-marker]:!bg-transparent [&_.continent-label-marker]:!border-0 [&_.continent-label-marker]:!shadow-none [&_.leaflet-tooltip]:!bg-[hsl(var(--card)/0.7)] [&_.leaflet-tooltip]:!backdrop-blur-xl [&_.leaflet-tooltip]:!border [&_.leaflet-tooltip]:!border-[hsl(var(--border))] [&_.leaflet-tooltip]:!rounded-xl [&_.leaflet-tooltip]:!shadow-[0_20px_25px_-5px_rgb(0_0_0_/_0.1),0_8px_10px_-6px_rgb(0_0_0_/_0.1)] [&_.leaflet-tooltip]:!p-0 [&_.leaflet-tooltip]:!text-[hsl(var(--foreground))] [&_.leaflet-tooltip]:overflow-hidden [&_.leaflet-grab]:!cursor-pointer [&_.leaflet-dragging_.leaflet-grab]:!cursor-grabbing"
+      className={mapShellClassName}
       style={mapContainerStyle}
     >
       <MapContainer
@@ -940,6 +1063,9 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
         maxBounds={[[-90, -180], [90, 180]]}
         maxBoundsViscosity={1.0}
       >
+        
+        <MapResetControl L={L} center={initialCenter} zoom={initialZoom} />
+
         {worldCountries && worldRenderer && (
           <GeoJSON
             key={`world-${theme}-${mode}-${countryData.length}`}
@@ -950,24 +1076,16 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
               const props = feature && feature.properties ? feature.properties : {};
               const iso = (props.iso_a3 || props.ISO_A3 || props.adm0_a3 || '').toString().toUpperCase();
 
-              if (mode === 'summary') {
-                if (iso === 'IND') {
-                  return { color: 'transparent', weight: 0, fillOpacity: 0, opacity: 0 };
-                }
-                return getSummaryLandStyle();
-              }
-
               if (iso === 'IND') {
-                const land = getLandStyle(theme);
                 return {
-                  stroke: false,
-                  fillColor: land.fillColor,
-                  fillOpacity: land.fillOpacity,
-                  smoothFactor: 0
+                  color: 'transparent',
+                  weight: 0,
+                  fillOpacity: 0,
+                  opacity: 0
                 };
               }
 
-              return getLandStyle(theme);
+              return getSummaryLandStyle();
             }}
           />
         )}
@@ -977,31 +1095,16 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
 
         <MapZoomListener setZoomLevel={setZoomLevel} />
         <MapViewportListener setViewport={setViewport} />
-        <MapBoundsHelper ips={externalIps} mode={mode} />
-        <PcapFocusController focusCluster={activeFocusedPcapCluster} mode={mode} />
+        <PcapDrillDownController focusRequest={pcapDrillDownRequest} mode={mode} />
 
-        {mode !== 'summary' && indiaBorder && indiaRenderer && (
-          <GeoJSON
-            key={`india-border-${theme}`}
-            data={indiaBorder}
-            renderer={indiaRenderer}
-            pane="geoPane"
-            style={{
-              ...getLandStyle(theme),
-              fillOpacity: 0
-            }}
-          />
-        )}
-
-        {/* Accurate India layer for summary mode, using the dedicated
+        {/* Accurate India layer using the dedicated
             full-resolution India border rather than the coarser
             world-countries.json India polygon. It uses the same flat,
             static land style as every other country - no hover state,
-            only that country's marker (see summaryMarkerItems) opens the
-            detail panel. */}
-        {mode === 'summary' && indiaBorder && indiaRenderer && (
+            while only the summary country's marker opens a detail panel. */}
+        {indiaBorder && indiaRenderer && (
           <GeoJSON
-            key={`india-flat-${theme}`}
+            key={`india-flat-${mode}`}
             data={indiaBorder}
             renderer={indiaRenderer}
             pane="geoPane"
@@ -1019,6 +1122,7 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
               <Polyline
                 pane="topPane"
                 positions={positions}
+                interactive={false}
                 pathOptions={{
                   color: theme === 'dark' ? '#e2e8f0' : '#0f172a',
                   weight: lineStyle.trackWeight,
@@ -1030,6 +1134,7 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
               <Polyline
                 pane="topPane"
                 positions={positions}
+                interactive={false}
                 pathOptions={{
                   color: pointStyle.line,
                   weight: lineStyle.weight,
@@ -1044,15 +1149,13 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
 
         {mode === 'reports' ? (
           reportsGroupedPoints.map((point, idx) => {
-            // Reports show IP locations inside a country. Keep every marker
-            // compact and the same size so dense areas do not get cluttered.
-            const markerSize = 20;
-            const pointStyle = getPcapPointStyle(point.count);
+
+            const markerSize = point.count > 999 ? 22 : 18;
+            const markerFontSize = point.count > 999 ? 8 : 9;
             const icon = L.divIcon({
               html: `
-                <div class="pcap-marker group" style="width: ${markerSize}px; height: ${markerSize}px; background: ${pointStyle.marker}; box-shadow: ${buildGlowShadow(pointStyle)};">
-                  <div class="pcap-pulse" style="background: ${pointStyle.marker};"></div>
-                  <span style="position: relative; z-index: 2; font-size: 10px;">${point.count.toLocaleString()}</span>
+                <div class="reports-map-marker" style="width: ${markerSize}px; height: ${markerSize}px;">
+                  <span style="position: relative; z-index: 2; font-size: ${markerFontSize}px;">${point.count.toLocaleString()}</span>
                 </div>
               `,
               className: '',
@@ -1071,6 +1174,7 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
                     lng: point.lng,
                     city: point.count === 1 ? point.city : `${point.count.toLocaleString()} IPs`,
                     country: point.country,
+                    categoryLabel: point.categoryLabel,
                     ips: point.ips,
                     count: point.count,
                     totalPackets: point.totalPackets
@@ -1112,19 +1216,40 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
                 icon={icon}
                 eventHandlers={{
                   click: () => {
-                    if (point.count > 1 && zoomLevel < 12) {
-                      setFocusedPcapCluster(point);
-                    } else {
-                      setSelectedGroup({
+                    /*
+                     * A real exact-coordinate group should ALWAYS open
+                     * its IP card directly, even when it contains multiple
+                     * IPs. This is important for cases such as 5 IPs at the
+                     * exact same latitude/longitude.
+                     *
+                     * A count > 1 that is NOT an exact-coordinate group is
+                     * only a temporary screen cluster. Those points are
+                     * nearby, not the same location, so clicking it drills
+                     * down instead of combining them into one details card.
+                     */
+                    const isExactGroup = point.isExactCoordinateGroup === true;
+
+                    if (point.count > 1 && !isExactGroup && zoomLevel < 12) {
+                      setSelectedGroup(null);
+                      setPcapDrillDownRequest({
                         lat: point.lat,
                         lng: point.lng,
-                        city: point.count === 1 ? point.city : `${point.count.toLocaleString()} IPs`,
-                        country: point.country,
-                        ips: point.ips,
-                        count: point.count,
-                        totalPackets: point.totalPackets
+                        requestId: `${point.id}-${Date.now()}`
                       });
+                      return;
                     }
+
+                    setSelectedGroup({
+                      lat: point.lat,
+                      lng: point.lng,
+                      city: point.count === 1
+                        ? point.city
+                        : `${point.count.toLocaleString()} IPs`,
+                      country: point.country,
+                      ips: point.ips,
+                      count: point.count,
+                      totalPackets: point.totalPackets
+                    });
                   }
                 }}
               >
@@ -1176,7 +1301,6 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
           })
         ) : null}
 
-
         {mode === 'pcap' && L && (
           <Marker
             pane="topPane"
@@ -1201,7 +1325,7 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
             initial={{ opacity: 0, y: -8, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.35, ease: 'easeOut' }}
-            className="group bg-card/90 backdrop-blur-xl border border-theme pl-2.5 pr-4 py-2 rounded-2xl shadow-[0_10px_28px_rgba(15,23,42,0.22)] flex items-center gap-2.5 pointer-events-auto transition-transform duration-300 hover:scale-[1.03]"
+            className="group bg-card border border-theme pl-2.5 pr-4 py-2 rounded-2xl shadow-[0_10px_28px_rgba(15,23,42,0.22)] flex items-center gap-2.5 pointer-events-auto transition-transform duration-300 hover:scale-[1.03]"
           >
             <div className="p-2 bg-blue-500/12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
               <MapPin size={15} className="text-blue-600" />
@@ -1219,10 +1343,10 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.35, ease: 'easeOut' }}
           whileHover={{ scale: 1.03 }}
-          className="group bg-card/90 backdrop-blur-xl border border-theme pl-2.5 pr-4 py-2 rounded-2xl shadow-[0_10px_28px_rgba(15,23,42,0.22)] flex items-center gap-2.5"
+          className="group bg-card border border-theme pl-2.5 pr-4 py-2 rounded-2xl shadow-[0_10px_28px_rgba(15,23,42,0.22)] flex items-center gap-2.5"
         >
           <div className="p-2 bg-blue-500/12 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
-            <Globe size={15} className="text-blue-600" />
+            <MapPin size={15} className="text-blue-600" />
           </div>
           <div>
             <div className="font-black text-[9px] uppercase tracking-wider text-slate-500 leading-none mb-1">
@@ -1243,10 +1367,10 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="absolute top-32 right-10 z-[1001] w-96 bg-card/95 backdrop-blur-xl border border-theme/70 rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.22)] overflow-hidden"
+            className="absolute top-32 right-10 z-[1001] w-96 bg-card border border-theme rounded-2xl shadow-[0_20px_50px_rgba(15,23,42,0.22)] overflow-hidden"
           >
             <motion.div
-              className="p-5 bg-blue-500/5 border-b border-theme flex items-center justify-between cursor-move group/header"
+              className="p-5 bg-card border-b border-theme flex items-center justify-between cursor-move group/header"
             >
               <div className="flex items-center gap-4">
                 <div className="p-2.5 bg-blue-500/10 rounded-xl group-hover/header:scale-110 transition-transform duration-500">
@@ -1254,7 +1378,7 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
                 </div>
                 <div>
                   <h4 className="text-[15px] font-black text-foreground uppercase ">{selectedGroup.city}</h4>
-                  <p className="text-[10px] text-slate-500 font-black uppercase ">{selectedGroup.country}</p>
+                  <p className="text-[10px] text-slate-500 font-black uppercase ">{selectedGroup.categoryLabel || selectedGroup.country}</p>
                 </div>
               </div>
               <button onClick={() => setSelectedGroup(null)} className="p-2 hover:bg-rose-500/10 hover:text-rose-500 rounded-full transition-colors text-slate-500 group/close">
@@ -1294,10 +1418,7 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
 
       <AnimatePresence>
         {selectedCountry && (() => {
-          // The on-map bullet is colored by IP-count magnitude by design;
-          // the popup gets its own legible blue accent (matching the
-          // title/stat chrome above) so the numbers here are easy to read
-          // on the card regardless of the marker's heat color.
+
           const accent = {
             marker: '#3b82f6',
             halo: 'rgba(59, 130, 246, 0.35)',
@@ -1460,6 +1581,25 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
           position: relative;
           will-change: transform;
         }
+        .reports-map-marker {
+          background: ${REPORT_MARKER_COLORS.fill};
+          border: 1.5px solid #ffffff;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #ffffff;
+          font-weight: 900;
+          text-shadow: 0 1px 2px rgba(15, 23, 42, 0.28);
+          box-shadow: 0 1px 5px ${REPORT_MARKER_COLORS.shadow};
+          transition: transform 0.18s ease, box-shadow 0.18s ease;
+          cursor: pointer;
+        }
+        .reports-map-marker:hover {
+          transform: translateY(-2px) scale(1.08);
+          box-shadow: 0 3px 9px ${REPORT_MARKER_COLORS.hoverShadow};
+          z-index: 1000;
+        }
         .pcap-marker-sprinkle {
           animation: pcap-marker-sprinkle 460ms cubic-bezier(0.16, 1.15, 0.28, 1) both;
         }
@@ -1518,27 +1658,84 @@ export function WorldMapLeaflet({ externalIps = [], onIpClick, mode = 'pcap', co
           0% { opacity: 0.34; transform: scale(0.5); }
           100% { opacity: 0; transform: scale(2.1); }
         }
+       .leaflet-bottom.leaflet-right {
+  right: 12px !important;
+  bottom: 12px !important;
+}
+
+.map-controls-stack {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16) !important;
+}
+
+.map-controls-stack .map-control-button {
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 34px !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin: 0 !important;
+  padding: 0 !important;
+
+  border: 0 !important;
+  border-bottom: 1px solid hsl(var(--border) / 0.7) !important;
+
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+
+  text-decoration: none !important;
+  font-weight: 700 !important;
+
+  transition: none !important;
+}
+
+.map-controls-stack .map-control-button:last-child {
+  border-bottom: 0 !important;
+}
+
+.map-controls-stack .map-control-button:hover,
+.map-controls-stack .map-control-button:active,
+.map-controls-stack .map-control-button:focus,
+.map-controls-stack .map-control-button:focus-visible,
+.map-controls-stack .map-control-button:visited {
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.map-controls-stack .map-control-button:nth-child(1),
+.map-controls-stack .map-control-button:nth-child(2) {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+}
+
+.map-controls-stack .map-reset-button svg {
+  width: 16px !important;
+  height: 16px !important;
+  display: block !important;
+}
+
         .leaflet-container {
-          background: ${mode === 'summary'
-            ? SUMMARY_MAP_BACKGROUND
-            : (theme === 'dark'
-                ? 'radial-gradient(120% 120% at 30% 18%, #16263c 0%, #0a1420 50%, #04070c 100%)'
-                : 'radial-gradient(120% 120% at 30% 15%, #fbfaf6 0%, #f5f3ec 55%, #ece7db 100%)')} !important;
+          background: ${SUMMARY_MAP_BACKGROUND} !important;
         }
         .map-atmosphere-vignette {
           position: absolute;
           inset: 0;
           z-index: 450;
           pointer-events: none;
-          background: ${mode === 'summary'
-            ? 'radial-gradient(120% 100% at 50% 42%, transparent 65%, rgba(10, 30, 60, 0.16) 100%)'
-            : (theme === 'dark'
-                ? 'radial-gradient(120% 100% at 50% 45%, transparent 55%, rgba(2, 6, 14, 0.5) 100%)'
-                : 'radial-gradient(120% 100% at 50% 45%, transparent 65%, rgba(120, 105, 80, 0.14) 100%)')};
+          background: radial-gradient(120% 100% at 50% 42%, transparent 65%, rgba(10, 30, 60, 0.16) 100%);
         }
         .leaflet-tooltip {
-          background: hsl(var(--card) / 0.7) !important;
-          backdrop-filter: blur(12px) !important;
+          background: hsl(var(--card)) !important;
+          backdrop-filter: none !important;
           border: 1px solid hsl(var(--border)) !important;
           border-radius: 12px !important;
           box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
@@ -1573,14 +1770,15 @@ MapViewportListener.propTypes = {
   setViewport: PropTypes.func,
 };
 
-MapBoundsHelper.propTypes = {
-  ips: PropTypes.array,
+PcapDrillDownController.propTypes = {
+  focusRequest: PropTypes.object,
   mode: PropTypes.string,
 };
 
-PcapFocusController.propTypes = {
-  focusCluster: PropTypes.object,
-  mode: PropTypes.string,
+MapResetControl.propTypes = {
+  L: PropTypes.object,
+  center: PropTypes.arrayOf(PropTypes.number),
+  zoom: PropTypes.number,
 };
 
 ContinentLabels.propTypes = {
@@ -1596,4 +1794,7 @@ WorldMapLeaflet.propTypes = {
   mode: PropTypes.string,
   countryData: PropTypes.array,
   title: PropTypes.string,
+  fallbackCountry: PropTypes.string,
+  reportLabel: PropTypes.string,
+  reportType: PropTypes.string,
 };
