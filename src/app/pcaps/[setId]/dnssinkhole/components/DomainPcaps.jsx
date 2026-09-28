@@ -11,7 +11,7 @@ export default function DomainPcaps({ selectedDomain }) {
     <div>
       <div className="mb-5 flex items-center justify-between gap-4 border-b border-theme pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20">
             <FileText size={18} />
           </div>
           <div>
@@ -20,7 +20,7 @@ export default function DomainPcaps({ selectedDomain }) {
             </h2>
             <p className="mt-0.5 text-sm text-muted-foreground">
               Connected PCAPs:{" "}
-              <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-amber-500">
+              <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-semibold tabular-nums text-blue-500">
                 {selectedDomain.pcap_ids.length}
               </span>
             </p>

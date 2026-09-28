@@ -34,3 +34,27 @@ export async function dnssinkhole(accessToken) {
     throw error;
   }
 }
+//http://192.168.10.11:5000/api/pcaps/set/2/domains/phishing-test.test/isps
+export async function getISPdnsSinkholeDomain(domainName, accessToken) {
+  try {
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/pcaps/set/2/domains/${encodeURIComponent(domainName)}/isps`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch ISP data: ${res.status}`);
+    }
+
+    const json = await res.json();
+
+    return json.data;
+  } catch (error) {
+    console.log("error while fetching data of ISP from dns-sinkhole", error);
+    throw error;
+  }
+}
