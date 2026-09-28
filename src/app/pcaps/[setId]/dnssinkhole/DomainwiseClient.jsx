@@ -8,23 +8,16 @@ import DomainIsp from "./components/DomainIsp";
 import DomainIp from "./components/DomainIp";
 import IpSearch from "./components/IpSearch";
 import { Search, Globe, ChevronRight, Activity } from "lucide-react";
-import {
-    
-    Map,
-    FileText,
-    Server,
-    Network,
-} from "lucide-react";
+import { Map, FileText, Server, Network } from "lucide-react";
 const DOMAIN_TABS = [
-    { id: "Map", icon: Map },
-    { id: "PCAPs", icon: FileText },
-    { id: "ISP", icon: Server },
-    { id: "IP", icon: Network },
-    { id: "IPSearch", icon: Search },
+  { id: "Map", icon: Map },
+  { id: "PCAPs", icon: FileText },
+  { id: "ISP", icon: Server },
+  { id: "IP", icon: Network },
+  { id: "IPSearch", icon: Search },
 ];
 
 export default function DomainwiseClient({ dnsData, session }) {
-  
   const total_domains = dnsData.length;
   const [selectedDomain, setSelectedDomain] = useState(null);
   const [activeTab, setActiveTab] = useState("Map");
@@ -67,10 +60,10 @@ export default function DomainwiseClient({ dnsData, session }) {
   }, [dnsData]);
   useEffect(() => {
     if (selectedDomain) {
-        setActiveTab("Map");
-        setSelectedIp("");
+      setActiveTab("Map");
+      setSelectedIp("");
     }
-}, [selectedDomain]);
+  }, [selectedDomain]);
 
   const handleDomainClick = (item) => {
     setSelectedDomain(item);
@@ -101,7 +94,7 @@ export default function DomainwiseClient({ dnsData, session }) {
   };
 
   return (
-    <div className="flex flex-col  pb-10">
+<div className="flex h-[calc(100vh-56px)] flex-col overflow-hidden">
       {!selectedDomain && (
         <>
           <div className="flex items-center justify-between gap-4 px-6 pt-2 pb-4">
@@ -127,10 +120,10 @@ export default function DomainwiseClient({ dnsData, session }) {
               />
             </div>
           </div>
-
           {filterDomains.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 px-6 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {filterDomains.map((item) => (
+          <div className="mx-6 flex-1 min-h-0 overflow-y-auto border-2 mb-2 border-theme  p-4">
+          <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {filterDomains.map((item) => (
                 <div
                   key={item.host}
                   onClick={() => handleDomainClick(item)}
@@ -139,12 +132,18 @@ export default function DomainwiseClient({ dnsData, session }) {
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 transition-colors group-hover:bg-blue-500 group-hover:text-white">
                     <Globe size={16} />
                   </div>
-                  <span
-                    className="truncate text-[13px] font-medium text-foreground"
-                    title={item.host}
-                  >
-                    {item.host}
-                  </span>
+                  <div className="min-w-0">
+                    <span
+                      className="block truncate text-[13px] font-medium text-foreground"
+                      title={item.host}
+                    >
+                      {item.host}
+                    </span>
+
+                    <span className="mt-1  items-center gap-1 text-[11px] text-muted-foreground">
+                      {Number(item.request_count).toLocaleString()} requests
+                    </span>
+                  </div>
                   <ChevronRight
                     size={14}
                     className="ml-auto shrink-0 -translate-x-1 text-slate-400 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100"
@@ -152,6 +151,7 @@ export default function DomainwiseClient({ dnsData, session }) {
                 </div>
               ))}
             </div>
+          </div>
           ) : (
             <div className="mx-6 flex flex-col items-center gap-2 rounded-xl border border-dashed border-theme py-16 text-muted-foreground">
               <Search size={22} className="opacity-50" />
@@ -163,8 +163,8 @@ export default function DomainwiseClient({ dnsData, session }) {
 
       {selectedDomain && (
         <>
-          <div className="relative mx-8 mb-2 flex items-center gap-5 overflow-hidden  border border-theme bg-card px-5 py-4 shadow-sm">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20">
+          <div className="relative mx-8 mb-1 mt-2 flex items-center gap-5 overflow-hidden  border border-theme bg-card px-5 py-4 shadow-sm">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-pink-500 ring-1 ring-amber-500/20">
               <Globe size={20} />
             </div>
             <div className="min-w-0">
@@ -180,7 +180,7 @@ export default function DomainwiseClient({ dnsData, session }) {
               <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Requests
               </p>
-              <p className="flex items-center gap-1.5 text-lg font-semibold tabular-nums text-amber-500">
+              <p className="flex items-center gap-1.5 text-lg font-semibold tabular-nums text-green-500">
                 <Activity size={15} />
                 {Number(selectedDomain.request_count).toLocaleString()}
               </p>
@@ -196,17 +196,15 @@ export default function DomainwiseClient({ dnsData, session }) {
               />
             </button>
           </div>
-          <div className="mx-8">
+          <div className="mx-8 flex flex-1 min-h-0 flex-col">
+            {/* TOP TABS */}
+            <div className="flex items-center bg-card border  border-blue-400/40 bg-slate-50  rounded-2xl overflow-hidden shadow-[0_0_0_1px_rgba(59,130,246,0.06),0_0_25px_rgba(59,130,246,0.10)] dark:border-blue-400/25 dark:bg-slate-900 dark:shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_0_30px_rgba(59,130,246,0.12)]">
+              {DOMAIN_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
 
-    {/* TOP TABS */}
-    <div className="flex items-center bg-card border border-theme rounded-xl overflow-hidden">
-
-        {DOMAIN_TABS.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-
-            return (
-                <button
+                return (
+                  <button
                     key={tab.id}
                     onClick={() => handleTabChange(tab.id)}
                     className={`
@@ -220,79 +218,63 @@ export default function DomainwiseClient({ dnsData, session }) {
                         border-r border-theme
                         last:border-r-0
                         ${
-                            isActive
-                                ? "text-amber-500 bg-amber-500/5"
-                                : "text-foreground hover:text-amber-500 hover:bg-amber-500/5"
+                          isActive
+                            ? "text-blue-500 bg-blue-500/5"
+                            : "text-foreground hover:text-blue-500 hover:bg-blue-500/5"
                         }
                     `}
-                >
-
+                  >
                     <Icon
-                        size={16}
-                        className={
-                            isActive
-                                ? "text-amber-500"
-                                : "text-muted-foreground"
-                        }
+                      size={16}
+                      className={
+                        isActive ? "text-blue-500" : "text-muted-foreground"
+                      }
                     />
 
-                    <span>
-                        {tab.id === "IPSearch"
-                            ? "IP Search"
-                            : tab.id}
-                    </span>
+                    <span>{tab.id === "IPSearch" ? "IP Search" : tab.id}</span>
 
                     {isActive && (
-                        <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-amber-500" />
+                      <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-blue-500" />
                     )}
+                  </button>
+                );
+              })}
+            </div>
 
-                </button>
-            );
-        })}
+            {/* CONTENT */}
+            <div className="mt-1 flex-1 min-h-0 rounded-xl border border-theme bg-card p-4">
+              {activeTab === "Map" && (
+                <DomainMap
+                  selectedDomain={selectedDomain}
+                  setActiveTab={setActiveTab}
+                  setSelectedIp={setSelectedIp}
+                />
+              )}
 
-    </div>
+              {activeTab === "PCAPs" && (
+                <DomainPcaps selectedDomain={selectedDomain} />
+              )}
 
+              {activeTab === "ISP" && (
+                <DomainIsp
+                  selectedDomain={selectedDomain}
+                  session={session}
+                  setActiveTab={setActiveTab}
+                  setSelectedIp={setSelectedIp}
+                />
+              )}
 
-    {/* CONTENT */}
-    <div className="mt-4 border border-theme rounded-xl bg-card p-4 min-h-[calc(100vh-300px)]">
+              {activeTab === "IP" && (
+                <DomainIp
+                  selectedDomain={selectedDomain}
+                  setActiveTab={setActiveTab}
+                  setSelectedIp={setSelectedIp}
+                />
+              )}
 
-        {activeTab === "Map" && (
-            <DomainMap
-                selectedDomain={selectedDomain}
-                setActiveTab={setActiveTab}
-                setSelectedIp={setSelectedIp}
-            />
-        )}
-
-        {activeTab === "PCAPs" && (
-            <DomainPcaps
-                selectedDomain={selectedDomain}
-            />
-        )}
-
-        {activeTab === "ISP" && (
-            <DomainIsp
-                selectedDomain={selectedDomain}
-            />
-        )}
-
-        {activeTab === "IP" && (
-            <DomainIp
-                selectedDomain={selectedDomain}
-                setActiveTab={setActiveTab}
-                setSelectedIp={setSelectedIp}
-            />
-        )}
-
-        {activeTab === "IPSearch" && (
-            <IpSearch
-                initialIp={selectedIp}
-            />
-        )}
-
-    </div>
-
-</div>
+              {activeTab === "IPSearch" && <IpSearch initialIp={selectedIp} />}
+            </div>
+          </div>
         </>
       )}
     </div>
