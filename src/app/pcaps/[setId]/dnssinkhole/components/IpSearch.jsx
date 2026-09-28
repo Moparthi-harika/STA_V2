@@ -1,7 +1,1 @@
-export default function IpSearch(){
-    return(
-        <>
-        IpSearch
-        </>
-    )
-}
+export { IPSearch as default } from "../../../../dashboard/IPSearch";

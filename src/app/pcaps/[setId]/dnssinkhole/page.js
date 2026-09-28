@@ -1,11 +1,9 @@
-
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import PcapErrorView from "../PcapErrorView";
-import {dnssinkhole} from "../dnssinkhole/dnsApiService";
+import { dnssinkhole } from "../dnssinkhole/dnsApiService";
 import DomainwiseClient from "./DomainwiseClient";
 export default async function DomainwisePage({ params }) {
- 
   // console.log(dnsData);
   const session = await auth();
   if (!session) redirect("/");
@@ -17,15 +15,14 @@ export default async function DomainwisePage({ params }) {
     return <PcapErrorView />;
   }
 
-
-  const dnsData = await dnssinkhole(session.accessToken); 
+  const dnsData = await dnssinkhole(session.accessToken);
   const resolvesParams = await params;
   const setId = resolvesParams.setId;
   const actualId = setId.replace("set-", "");
 
   return (
     <div>
-      <DomainwiseClient dnsData={dnsData} session={session}/>
+      <DomainwiseClient dnsData={dnsData} session={session} />
     </div>
   );
 }
