@@ -1,14 +1,15 @@
-export const BASE_URL = typeof window === 'undefined' 
-  ? process.env.BACKEND_URL
-  : '/api/proxy';
-
+export const BASE_URL =
+  typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
 
 const fetchWithTimeout = async (url, options = {}) => {
   const { timeout = 30000, ...fetchOptions } = options;
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeout);
   try {
-    const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
+    const response = await fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal,
+    });
     clearTimeout(id);
     return response;
   } catch (error) {
@@ -26,7 +27,9 @@ export async function fetchPcapSet(setId, accessToken) {
     });
     if (!res.ok) {
       const errorBody = await res.text();
-      throw new Error(`Failed to fetch pcap set: ${res.status}${errorBody ? ` - ${errorBody}` : ""}`);
+      throw new Error(
+        `Failed to fetch pcap set: ${res.status}${errorBody ? ` - ${errorBody}` : ""}`,
+      );
     }
     const json = await res.json();
     return json;
@@ -38,22 +41,23 @@ export async function fetchPcapSet(setId, accessToken) {
 
 export async function fetchPcapOverview(pcapId) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/overview?pcap_id=${pcapId}`);
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/overview?pcap_id=${pcapId}`,
+    );
     if (!res.ok) throw new Error(`Failed to fetch overview: ${res.status}`);
     const json = await res.json();
     return json.data;
   } catch (error) {
     console.error("API Error fetching overview:", error);
-    throw error; 
+    throw error;
   }
 }
-
 
 export async function fetchPcapConnections(pcapId, page = 1, period = "") {
   try {
     let url = `${BASE_URL}/pcaps/${pcapId}/connections?page=${page}&limit=50`;
     if (period) url += `&period=${period}`;
-    
+
     const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error(`Failed to fetch connections: ${res.status}`);
     const json = await res.json();
@@ -63,7 +67,6 @@ export async function fetchPcapConnections(pcapId, page = 1, period = "") {
     throw error;
   }
 }
-
 
 export async function fetchPcapInsights(pcapId) {
   try {
@@ -79,7 +82,9 @@ export async function fetchPcapInsights(pcapId) {
 
 export async function downloadPcapConnectionsExport(pcapId) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/pcaps/${pcapId}/connections/export`);
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/pcaps/${pcapId}/connections/export`,
+    );
     if (!res.ok) throw new Error(`Failed to export connections: ${res.status}`);
 
     const blob = await res.blob();
@@ -130,7 +135,9 @@ export async function fetchPcapMap(pcapId) {
 
 export async function fetchPcapGeoReport(pcapId) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/reports/geo?pcap_id=${pcapId}`);
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/reports/geo?pcap_id=${pcapId}`,
+    );
     if (!res.ok) throw new Error(`Failed to fetch report: ${res.status}`);
     const json = await res.json();
     return json;
@@ -140,29 +147,36 @@ export async function fetchPcapGeoReport(pcapId) {
   }
 }
 
-
 export async function triggerPcapExport(pcapId, type, value) {
   try {
     const url = `${BASE_URL}/reports/${pcapId}/${type}/${encodeURIComponent(value)}/export`; // job id
     const res = await fetchWithTimeout(url);
-    if (!res.ok) throw new Error(`Failed to trigger pcap export: ${res.status}`);
+    if (!res.ok)
+      throw new Error(`Failed to trigger pcap export: ${res.status}`);
     const json = await res.json();
     return json.data.job_id;
   } catch (error) {
-    console.error(`[apiService] triggerPcapExport for ${pcapId}/${type}/${value}:`, error);
+    console.error(
+      `[apiService] triggerPcapExport for ${pcapId}/${type}/${value}:`,
+      error,
+    );
     throw error;
   }
 }
 
-
 export async function fetchPcapDetails(pcapId, type, value) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/reports/${pcapId}/${type}/${encodeURIComponent(value)}`);
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/reports/${pcapId}/${type}/${encodeURIComponent(value)}`,
+    );
     if (!res.ok) throw new Error(`Failed to fetch pcap details: ${res.status}`);
     const json = await res.json();
     return json;
   } catch (error) {
-    console.error(`fetchPcapDetails error for ${pcapId}/${type}/${value}:`, error);
+    console.error(
+      `fetchPcapDetails error for ${pcapId}/${type}/${value}:`,
+      error,
+    );
     throw error;
   }
 }

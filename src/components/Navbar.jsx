@@ -131,7 +131,7 @@ export function Navbar({ user }) {
                   <div className="absolute top-14 left-0 bg-card border border-theme shadow-2xl rounded-xl overflow-hidden p-1.5 min-w-[160px] z-50">
                     {[
                       { label: "Set 1", href: "/pcaps/set-1" },
-                      { label : "POC Demo" ,href:"/pcaps/set-2"}
+                      { label: "Sinkhole Packets", href: "/pcaps/set-2" },
                     ].map((set) => (
                       <Link
                         key={set.href}
@@ -280,8 +280,6 @@ export function Navbar({ user }) {
               </div>
 
               <div className="relative">
-               
-                 
                 <Link
                   href={isAdmin ? "#" : "/feedback/submit"}
                   onClick={(e) => {

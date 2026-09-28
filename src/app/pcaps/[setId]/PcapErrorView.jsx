@@ -4,19 +4,15 @@ export default function PcapErrorView() {
   return (
     <div className="flex items-center justify-center min-h-[60vh] bg-background px-4">
       <div className="w-full max-w-lg rounded-2xl border border-theme bg-card shadow-xl overflow-hidden">
-
         {/* Status indicator */}
         <div className="px-6 pt-8 text-center">
-          
-          
-
           <h2 className="text-lg font-semibold text-foreground">
             Unable to load PCAP data
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-foreground/60">
-            We couldn't retrieve the PCAP information right now.
-            This may be temporary. Please try again in a moment.
+            We couldn't retrieve the PCAP information right now. This may be
+            temporary. Please try again in a moment.
           </p>
         </div>
 
@@ -47,7 +43,8 @@ export default function PcapErrorView() {
         {/* Subtle footer */}
         <div className="border-t border-theme bg-foreground/[0.02] px-6 py-3 text-center mb-8">
           <p className="text-xs text-foreground/40">
-            If the problem continues, refresh the page or contact your administrator.
+            If the problem continues, refresh the page or contact your
+            administrator.
           </p>
         </div>
       </div>

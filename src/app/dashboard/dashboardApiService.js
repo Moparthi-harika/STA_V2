@@ -1,16 +1,20 @@
-
-const BASE_URL = typeof window === 'undefined'
-  ? process.env.BACKEND_URL
-  : '/api/proxy';
+const BASE_URL =
+  typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
 
 const fetchWithTimeout = async (url, options = {}) => {
   const { timeout = 60000 } = options;
   const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(new Error("Request timed out")), timeout);
-  
+  const id = setTimeout(
+    () => controller.abort(new Error("Request timed out")),
+    timeout,
+  );
+
   try {
     console.log(`[fetchWithTimeout] Fetching: ${url}`);
-    const response = await fetch(url, { ...options, signal: controller.signal });
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
     console.log(`[fetchWithTimeout] Response from ${url}: ${response.status}`);
     clearTimeout(id);
     return response;
@@ -20,16 +24,16 @@ const fetchWithTimeout = async (url, options = {}) => {
     throw error;
   }
 };
- 
 
 export async function fetchDashboardOverview() {
   try {
     const res = await fetchWithTimeout(`${BASE_URL}/overview`);
-    if (!res.ok) throw new Error(`Failed to fetch dashboard overview: ${res.status}`);
+    if (!res.ok)
+      throw new Error(`Failed to fetch dashboard overview: ${res.status}`);
     const json = await res.json();
     return json.data;
   } catch (error) {
-    console.error('[dashboardApiService] fetchDashboardOverview:', error);
+    console.error("[dashboardApiService] fetchDashboardOverview:", error);
     throw error;
   }
 }
@@ -37,11 +41,12 @@ export async function fetchDashboardOverview() {
 export async function fetchDashboardInsights() {
   try {
     const res = await fetchWithTimeout(`${BASE_URL}/insights`);
-    if (!res.ok) throw new Error(`Failed to fetch dashboard insights: ${res.status}`);
+    if (!res.ok)
+      throw new Error(`Failed to fetch dashboard insights: ${res.status}`);
     const json = await res.json();
     return json.data;
   } catch (error) {
-    console.error('[dashboardApiService] fetchDashboardInsights:', error);
+    console.error("[dashboardApiService] fetchDashboardInsights:", error);
     throw error;
   }
 }
@@ -49,11 +54,12 @@ export async function fetchDashboardInsights() {
 export async function fetchGlobalMapData() {
   try {
     const res = await fetchWithTimeout(`${BASE_URL}/map/external-ips`);
-    if (!res.ok) throw new Error(`Failed to fetch global map data: ${res.status}`);
+    if (!res.ok)
+      throw new Error(`Failed to fetch global map data: ${res.status}`);
     const json = await res.json();
     return json;
   } catch (error) {
-    console.error('[dashboardApiService] fetchGlobalMapData:', error);
+    console.error("[dashboardApiService] fetchGlobalMapData:", error);
     throw error;
   }
 }
@@ -77,19 +83,25 @@ export async function fetchReportsGeo() {
     const json = await res.json();
     return json;
   } catch (error) {
-    console.error('[dashboardApiService] fetchReportsGeo:', error);
+    console.error("[dashboardApiService] fetchReportsGeo:", error);
     throw error;
   }
 }
 
 export async function fetchReportsDetails(type, value) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/reports/details/${type}/${encodeURIComponent(value)}`);
-    if (!res.ok) throw new Error(`Failed to fetch reports details: ${res.status}`);
+    const res = await fetchWithTimeout(
+      `${BASE_URL}/reports/details/${type}/${encodeURIComponent(value)}`,
+    );
+    if (!res.ok)
+      throw new Error(`Failed to fetch reports details: ${res.status}`);
     const json = await res.json();
     return json;
   } catch (error) {
-    console.error(`[dashboardApiService] fetchReportsDetails for ${type}/${value}:`, error);
+    console.error(
+      `[dashboardApiService] fetchReportsDetails for ${type}/${value}:`,
+      error,
+    );
     throw error;
   }
 }
@@ -102,30 +114,38 @@ export async function triggerExport(type, value) {
     const json = await res.json();
     return json.data.job_id;
   } catch (error) {
-    console.error(`[dashboardApiService] triggerExport for ${type}/${value}:`, error);
+    console.error(
+      `[dashboardApiService] triggerExport for ${type}/${value}:`,
+      error,
+    );
     throw error;
   }
 }
 
 export async function pollExportStatus(jobId) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/export/status/${jobId}`);  // filename,status,total ips
+    const res = await fetchWithTimeout(`${BASE_URL}/export/status/${jobId}`); // filename,status,total ips
     if (!res.ok) throw new Error(`Failed to poll export status: ${res.status}`);
     const json = await res.json();
     return json.data;
   } catch (error) {
-    console.error(`[dashboardApiService] pollExportStatus for ${jobId}:`, error);
+    console.error(
+      `[dashboardApiService] pollExportStatus for ${jobId}:`,
+      error,
+    );
     throw error;
   }
 }
 
 export async function downloadExport(jobId, filename) {
   try {
-    const res = await fetchWithTimeout(`${BASE_URL}/export/download/${jobId}`, { timeout: 60000 }); // pdf
+    const res = await fetchWithTimeout(`${BASE_URL}/export/download/${jobId}`, {
+      timeout: 60000,
+    }); // pdf
     if (!res.ok) throw new Error(`Failed to download export: ${res.status}`);
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     a.click();

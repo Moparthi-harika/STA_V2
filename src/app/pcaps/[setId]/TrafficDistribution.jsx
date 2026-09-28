@@ -55,14 +55,10 @@ function ChartContainer({ title, children }) {
       <div className="flex items-center gap-2 mb-3 shrink-0">
         <div className="w-1.5 h-4 bg-blue-600 rounded-full" />
 
-        <div className="font-bold text-foreground">
-          {title}
-        </div>
+        <div className="font-bold text-foreground">{title}</div>
       </div>
 
-      <div className="flex-1 w-full min-h-0">
-        {children}
-      </div>
+      <div className="flex-1 w-full min-h-0">{children}</div>
     </div>
   );
 }
@@ -90,16 +86,11 @@ function CustomTooltip({ active, payload, label }) {
           CHART_COLORS[index % CHART_COLORS.length];
 
         return (
-          <p
-            key={index}
-            className="flex items-center gap-2"
-            style={{ color }}
-          >
+          <p key={index} className="flex items-center gap-2" style={{ color }}>
             <span
               className="w-1.5 h-1.5 rounded-full"
               style={{ backgroundColor: color }}
             />
-
             {entry.name}: {Number(entry.value).toLocaleString()}
           </p>
         );
@@ -146,8 +137,7 @@ export default function TrafficDistribution({ data }) {
   const transData = processData(transport, "label", "value");
   const directionData = processData(direction, "label", "value");
 
-  const getColor = (index) =>
-    CHART_COLORS[index % CHART_COLORS.length];
+  const getColor = (index) => CHART_COLORS[index % CHART_COLORS.length];
 
   const getPercentage = (value, total) =>
     total ? ((value / total) * 100).toFixed(2) : "0.00";
@@ -156,7 +146,6 @@ export default function TrafficDistribution({ data }) {
     <div className="mx-0 my-4">
       <div className="rounded-2xl border border-theme bg-card shadow-sm p-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
           {/* -------------------------------------------------- */}
           {/* Transport Layer                                    */}
           {/* -------------------------------------------------- */}
@@ -166,7 +155,6 @@ export default function TrafficDistribution({ data }) {
               <NoData />
             ) : (
               <div className="flex h-full items-center">
-
                 <div className="w-1/2 h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -189,9 +177,7 @@ export default function TrafficDistribution({ data }) {
                         ))}
                       </Pie>
 
-                      <RechartsTooltip
-                        content={<CustomTooltip />}
-                      />
+                      <RechartsTooltip content={<CustomTooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -200,14 +186,11 @@ export default function TrafficDistribution({ data }) {
                   {(() => {
                     const total = transData.reduce(
                       (sum, item) => sum + item.value,
-                      0
+                      0,
                     );
 
                     return transData.map((entry, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2"
-                      >
+                      <div key={index} className="flex items-center gap-2">
                         <div
                           className="w-2.5 h-2.5 rounded-sm shrink-0"
                           style={{
@@ -288,11 +271,7 @@ export default function TrafficDistribution({ data }) {
                     }}
                   />
 
-                  <Bar
-                    dataKey="value"
-                    radius={[0, 4, 4, 0]}
-                    barSize={10}
-                  >
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={10}>
                     {appData.slice(0, 5).map((_, index) => (
                       <Cell
                         key={`application-${index}`}
@@ -387,16 +366,9 @@ export default function TrafficDistribution({ data }) {
                     }}
                   />
 
-                  <Bar
-                    dataKey="value"
-                    radius={[4, 4, 0, 0]}
-                    barSize={12}
-                  >
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]} barSize={12}>
                     {urlData.slice(0, 5).map((_, index) => (
-                      <Cell
-                        key={`url-${index}`}
-                        fill={getColor(index)}
-                      />
+                      <Cell key={`url-${index}`} fill={getColor(index)} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -462,16 +434,9 @@ export default function TrafficDistribution({ data }) {
                     }}
                   />
 
-                  <Bar
-                    dataKey="value"
-                    radius={[0, 4, 4, 0]}
-                    barSize={10}
-                  >
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={10}>
                     {dnsData.slice(0, 5).map((_, index) => (
-                      <Cell
-                        key={`dns-${index}`}
-                        fill={getColor(index)}
-                      />
+                      <Cell key={`dns-${index}`} fill={getColor(index)} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -488,7 +453,6 @@ export default function TrafficDistribution({ data }) {
               <NoData />
             ) : (
               <div className="flex h-full items-center">
-
                 <div className="w-1/2 h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -511,9 +475,7 @@ export default function TrafficDistribution({ data }) {
                         ))}
                       </Pie>
 
-                      <RechartsTooltip
-                        content={<CustomTooltip />}
-                      />
+                      <RechartsTooltip content={<CustomTooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -522,14 +484,11 @@ export default function TrafficDistribution({ data }) {
                   {(() => {
                     const total = directionData.reduce(
                       (sum, item) => sum + item.value,
-                      0
+                      0,
                     );
 
                     return directionData.map((entry, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-2"
-                      >
+                      <div key={index} className="flex items-center gap-2">
                         <div
                           className="w-2.5 h-2.5 rounded-sm shrink-0"
                           style={{
@@ -610,23 +569,15 @@ export default function TrafficDistribution({ data }) {
                     }}
                   />
 
-                  <Bar
-                    dataKey="value"
-                    radius={[0, 4, 4, 0]}
-                    barSize={10}
-                  >
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={10}>
                     {sslData.slice(0, 5).map((_, index) => (
-                      <Cell
-                        key={`ssl-${index}`}
-                        fill={getColor(index)}
-                      />
+                      <Cell key={`ssl-${index}`} fill={getColor(index)} />
                     ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
             )}
           </ChartContainer>
-
         </div>
       </div>
     </div>

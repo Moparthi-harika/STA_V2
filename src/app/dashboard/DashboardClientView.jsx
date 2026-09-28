@@ -162,8 +162,7 @@ export default function DashboardClientView({ session }) {
     const headerOffset = 56;
 
     const elementTop =
-      tabBarRef.current.getBoundingClientRect().top +
-      window.pageYOffset;
+      tabBarRef.current.getBoundingClientRect().top + window.pageYOffset;
 
     window.scrollTo({
       top: Math.max(0, elementTop - headerOffset),
@@ -239,17 +238,16 @@ export default function DashboardClientView({ session }) {
   // ---------------------------------------------------------
   return (
     <div className="space-y-0 pb-10">
-
       {/* =====================================================
           WORLD MAP
           ===================================================== */}
-   <div className="mx-6 mt-4 h-[clamp(500px,68vh,680px)] overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white shadow-[0_20px_50px_rgba(71,85,105,0.14),0_2px_10px_rgba(71,85,105,0.06)] dark:border-slate-700/70 dark:bg-slate-900 dark:shadow-[0_20px_50px_rgba(2,6,23,0.38)]">
-  <WorldMapLeaflet
-    mode="summary"
-    countryData={mapData}
-    title="Overall IP Geo Distribution"
-  />
-</div>
+      <div className="mx-6 mt-4 h-[clamp(500px,68vh,680px)] overflow-hidden rounded-[1.75rem] border border-slate-200/80 bg-white shadow-[0_20px_50px_rgba(71,85,105,0.14),0_2px_10px_rgba(71,85,105,0.06)] dark:border-slate-700/70 dark:bg-slate-900 dark:shadow-[0_20px_50px_rgba(2,6,23,0.38)]">
+        <WorldMapLeaflet
+          mode="summary"
+          countryData={mapData}
+          title="Overall IP Geo Distribution"
+        />
+      </div>
 
       {/* =====================================================
           TAB NAVIGATION
@@ -261,9 +259,11 @@ export default function DashboardClientView({ session }) {
             through the navigation
           - z-index keeps it above all dashboard content
           ===================================================== */}
-    <div ref={tabBarRef} className="sticky top-14 z-30 w-full bg-white py-4  dark:bg-slate-950">
+      <div
+        ref={tabBarRef}
+        className="sticky top-14 z-30 w-full bg-white py-4  dark:bg-slate-950"
+      >
         <div className="mx-6">
-
           {/* -------------------------------------------------
               Main navigation shell
               ------------------------------------------------- */}
@@ -284,7 +284,6 @@ export default function DashboardClientView({ session }) {
               dark:shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_0_30px_rgba(59,130,246,0.12)]
             "
           >
-
             {/* -------------------------------------------------
                 Subtle top highlight
                 ------------------------------------------------- */}
@@ -312,10 +311,7 @@ export default function DashboardClientView({ session }) {
               // =================================================
               if (tab.id === "Reports") {
                 return (
-                  <div
-                    key={tab.id}
-                    className="group relative flex-1"
-                  >
+                  <div key={tab.id} className="group relative flex-1">
                     <button
                       onClick={() => {
                         handleTabChange("Reports");
@@ -586,7 +582,6 @@ export default function DashboardClientView({ session }) {
           TAB CONTENT
           ===================================================== */}
       <div className="min-h-[calc(100vh-112px)]">
-
         {/* -----------------------------------------------------
             PCAP SUMMARY
             ----------------------------------------------------- */}
@@ -599,9 +594,7 @@ export default function DashboardClientView({ session }) {
             ----------------------------------------------------- */}
         {activeTab === "Traffic Distribution" && (
           <div className="mx-6">
-          <TrafficDistribution
-            data={data.traffic_distribution}
-          />
+            <TrafficDistribution data={data.traffic_distribution} />
           </div>
         )}
 
@@ -614,19 +607,14 @@ export default function DashboardClientView({ session }) {
             PCAP INSIGHTS
             ----------------------------------------------------- */}
         {activeTab === "Pcap Insights" && (
-          <DashboardStats
-            stats={data.stats_details}
-          />
+          <DashboardStats stats={data.stats_details} />
         )}
 
         {/* -----------------------------------------------------
             REPORTS
             ----------------------------------------------------- */}
         {activeTab === "Reports" && (
-          <DashboardReports
-            initialMode={reportInitialMode}
-            session={session}
-          />
+          <DashboardReports initialMode={reportInitialMode} session={session} />
         )}
       </div>
     </div>

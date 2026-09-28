@@ -14,7 +14,7 @@
     --primary: 221 83% 53%;
   }
 
-  [data-theme='dark'] {
+  [data-theme="dark"] {
     --background: 222 47% 4%;
     --foreground: 210 40% 98%;
     --card: 222 47% 7%;
@@ -28,7 +28,9 @@
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 #login-username:-webkit-autofill,
@@ -50,7 +52,7 @@ body {
   border-color: rgba(0, 0, 0, 0.06) !important;
 }
 
-[data-theme='dark'] .border-theme {
+[data-theme="dark"] .border-theme {
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -58,7 +60,7 @@ body {
   border-color: rgba(0, 0, 0, 0.04) !important;
 }
 
-[data-theme='dark'] .divide-theme > :not([hidden]) ~ :not([hidden]) {
+[data-theme="dark"] .divide-theme > :not([hidden]) ~ :not([hidden]) {
   border-color: rgba(255, 255, 255, 0.06) !important;
 }
 
@@ -66,7 +68,6 @@ body {
   background-color: hsl(var(--nav));
   border-color: hsl(var(--border));
 }
-
 
 ::-webkit-scrollbar {
   width: 8px;
@@ -105,7 +106,3 @@ input:disabled,
 .cursor-not-allowed {
   cursor: not-allowed !important;
 }
-
-
-
-

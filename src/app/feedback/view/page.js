@@ -14,7 +14,8 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
 const getFeedbackKey = (feedback) =>
-  feedback.id ?? `${feedback.submitted_at || ""}|${feedback.email || feedback.name || ""}`;
+  feedback.id ??
+  `${feedback.submitted_at || ""}|${feedback.email || feedback.name || ""}`;
 
 export default function ViewFeedbackPage() {
   const [feedbackList, setFeedbackList] = useState([]);
@@ -60,7 +61,8 @@ export default function ViewFeedbackPage() {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const baseUrl = typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
+      const baseUrl =
+        typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
 
       const res = await fetch(`${baseUrl}/feedback`, {
         method: "GET",
@@ -80,8 +82,10 @@ export default function ViewFeedbackPage() {
       if (!res.ok) {
         const serverMsg = json && (json.error || json.message);
 
-        if (res.status >= 500) throw new Error(serverMsg || "Server error. Please try again later.");
-        if (res.status >= 400) throw new Error(serverMsg || `Request failed (${res.status}).`);
+        if (res.status >= 500)
+          throw new Error(serverMsg || "Server error. Please try again later.");
+        if (res.status >= 400)
+          throw new Error(serverMsg || `Request failed (${res.status}).`);
         throw new Error(serverMsg || `Unexpected response (${res.status}).`);
       }
 
@@ -101,7 +105,9 @@ export default function ViewFeedbackPage() {
       if (err && err.name === "AbortError") {
         setError("Request timed out. Please try again.");
       } else {
-        setError(err?.message || "Failed to fetch feedback. Please try again later.");
+        setError(
+          err?.message || "Failed to fetch feedback. Please try again later.",
+        );
       }
     } finally {
       setLoading(false);
@@ -135,11 +141,14 @@ export default function ViewFeedbackPage() {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const baseUrl = typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
+      const baseUrl =
+        typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
 
       const idOrKey = feedback.id
         ? encodeURIComponent(feedback.id)
-        : encodeURIComponent(feedback.name || feedback.email || feedback.submitted_at);
+        : encodeURIComponent(
+            feedback.name || feedback.email || feedback.submitted_at,
+          );
 
       const res = await fetch(`${baseUrl}/feedback/${idOrKey}`, {
         method: "DELETE",
@@ -159,7 +168,9 @@ export default function ViewFeedbackPage() {
         throw new Error(serverMsg || `Delete failed (${res.status}).`);
       }
 
-      setFeedbackList((prev) => prev.filter((item) => getFeedbackKey(item) !== key));
+      setFeedbackList((prev) =>
+        prev.filter((item) => getFeedbackKey(item) !== key),
+      );
 
       setExpanded((s) => {
         const n = new Set(s);
@@ -194,11 +205,14 @@ export default function ViewFeedbackPage() {
     }
   };
 
-  const uniqueRoles = Array.from(new Set(feedbackList.map((f) => f.role).filter(Boolean)));
+  const uniqueRoles = Array.from(
+    new Set(feedbackList.map((f) => f.role).filter(Boolean)),
+  );
 
   const filteredList = feedbackList.filter((f) => {
     if (roleFilter && roleFilter !== "all") {
-      if ((f.role || "").toLowerCase() !== (roleFilter || "").toLowerCase()) return false;
+      if ((f.role || "").toLowerCase() !== (roleFilter || "").toLowerCase())
+        return false;
     }
 
     if (dateFrom) {
@@ -253,7 +267,9 @@ export default function ViewFeedbackPage() {
               <MessageSquare size={20} className="text-blue-500" />
             </div>
             <div>
-              <h2 className="text-lg font-black font-serif text-foreground">Feedbacks</h2>
+              <h2 className="text-lg font-black font-serif text-foreground">
+                Feedbacks
+              </h2>
               <p className="font-serif mt-0.5">View all submitted feedbacks</p>
             </div>
           </div>
@@ -294,7 +310,10 @@ export default function ViewFeedbackPage() {
           ) : feedbackList.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <MessageSquare size={32} className="mx-auto text-slate-400 mb-3" />
+                <MessageSquare
+                  size={32}
+                  className="mx-auto text-slate-400 mb-3"
+                />
                 <p className="text-sm font-serif">No feedback available yet.</p>
               </div>
             </div>
@@ -304,8 +323,12 @@ export default function ViewFeedbackPage() {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
                 <div className="flex items-center gap-3">
                   <div className="font-serif">Total:</div>
-                  <div className="text-foreground font-serif">{feedbackList.length}</div>
-                  <div className="font-serif">(Showing {filteredList.length})</div>
+                  <div className="text-foreground font-serif">
+                    {feedbackList.length}
+                  </div>
+                  <div className="font-serif">
+                    (Showing {filteredList.length})
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -351,7 +374,9 @@ export default function ViewFeedbackPage() {
 
               {filteredList.length === 0 ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="text-center font-serif">No feedback matches the selected filters.</div>
+                  <div className="text-center font-serif">
+                    No feedback matches the selected filters.
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -377,9 +402,14 @@ export default function ViewFeedbackPage() {
                           {/* Name */}
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="p-1.5 bg-blue-500/10 rounded-lg flex-shrink-0">
-                              <MessageSquare size={16} className="text-blue-500" />
+                              <MessageSquare
+                                size={16}
+                                className="text-blue-500"
+                              />
                             </div>
-                            <p className="text-base font-serif text-foreground truncate">{feedback.name || "N/A"}</p>
+                            <p className="text-base font-serif text-foreground truncate">
+                              {feedback.name || "N/A"}
+                            </p>
                           </div>
 
                           {/* Email */}
@@ -387,7 +417,9 @@ export default function ViewFeedbackPage() {
                             <div className="p-1.5 bg-emerald-500/10 rounded-lg flex-shrink-0">
                               <Mail size={16} className="text-emerald-500" />
                             </div>
-                            <p className="text-base font-serif text-foreground truncate">{feedback.email || "N/A"}</p>
+                            <p className="text-base font-serif text-foreground truncate">
+                              {feedback.email || "N/A"}
+                            </p>
                           </div>
 
                           {/* Organisation */}
@@ -403,9 +435,14 @@ export default function ViewFeedbackPage() {
                           {/* Role */}
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="p-1.5 bg-violet-500/10 rounded-lg flex-shrink-0">
-                              <Building2 size={16} className="text-violet-500" />
+                              <Building2
+                                size={16}
+                                className="text-violet-500"
+                              />
                             </div>
-                            <p className="text-base font-serif text-foreground truncate">{feedback.role || "N/A"}</p>
+                            <p className="text-base font-serif text-foreground truncate">
+                              {feedback.role || "N/A"}
+                            </p>
                           </div>
 
                           {/* Submitted */}
@@ -440,7 +477,9 @@ export default function ViewFeedbackPage() {
                         {/* Expanded Message */}
                         {expanded.has(key) && (
                           <div className="mt-4 pt-3 border-t border-theme">
-                            <p className="text-[12px] font-serif mb-2">Message</p>
+                            <p className="text-[12px] font-serif mb-2">
+                              Message
+                            </p>
                             <p className="text-base text-foreground break-words whitespace-pre-wrap">
                               {feedback.message || "No message provided"}
                             </p>

@@ -29,9 +29,8 @@ export function LoginForm() {
         setError("Invalid username or password");
         setLoading(false);
       } else {
-        
         router.push("/");
-        router.refresh(); 
+        router.refresh();
       }
     } catch (err) {
       setError("An unexpected error occurred");
@@ -49,7 +48,12 @@ export function LoginForm() {
       )}
 
       <div className="space-y-1.5">
-        <label htmlFor="login-username" className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">Username</label>
+        <label
+          htmlFor="login-username"
+          className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1"
+        >
+          Username
+        </label>
         <div className="relative group">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
             <User size={18} />
@@ -67,7 +71,12 @@ export function LoginForm() {
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="login-password" className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1">Password</label>
+        <label
+          htmlFor="login-password"
+          className="text-[11px] font-black uppercase tracking-widest text-slate-500 ml-1"
+        >
+          Password
+        </label>
         <div className="relative group">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-blue-500 transition-colors">
             <Lock size={18} />
@@ -105,8 +114,6 @@ export function LoginForm() {
           </>
         )}
       </button>
-      
-      
     </form>
   );
 }

@@ -8,7 +8,6 @@ export function LogoutConfirmModal({ isOpen, onClose, onConfirm }) {
     <AnimatePresence>
       {isOpen && (
         <>
-          
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -16,8 +15,7 @@ export function LogoutConfirmModal({ isOpen, onClose, onConfirm }) {
             onClick={onClose}
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100]"
           />
-          
-          
+
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -25,14 +23,13 @@ export function LogoutConfirmModal({ isOpen, onClose, onConfirm }) {
             className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[400px] bg-card rounded-[2rem] shadow-2xl z-[101] overflow-hidden border border-theme transition-colors"
           >
             <div className="p-8 text-center">
-              <button 
+              <button
                 onClick={onClose}
                 className="absolute top-6 right-6 p-2 text-slate-400 hover:text-foreground hover:bg-slate-500/10 rounded-full transition-colors"
               >
                 <X size={20} />
               </button>
 
-              
               <h3 className="text-2xl font-serif text-foreground mb-3 ">
                 Confirm Logout
               </h3>
@@ -55,7 +52,6 @@ export function LogoutConfirmModal({ isOpen, onClose, onConfirm }) {
                 </button>
               </div>
             </div>
-           
           </motion.div>
         </>
       )}
