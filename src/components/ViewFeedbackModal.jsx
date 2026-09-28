@@ -17,7 +17,8 @@ import { ConfirmModal } from "./ConfirmModal";
 // Stable identity for a feedback item — falls back to a composite of
 // fields that should be unique per submission if no server id exists.
 const getFeedbackKey = (feedback) =>
-  feedback.id ?? `${feedback.submitted_at || ""}|${feedback.email || feedback.name || ""}`;
+  feedback.id ??
+  `${feedback.submitted_at || ""}|${feedback.email || feedback.name || ""}`;
 
 export function ViewFeedbackModal({ isOpen, onClose }) {
   const [feedbackList, setFeedbackList] = useState([]);
@@ -45,9 +46,7 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
 
     try {
       const baseUrl =
-        typeof window === "undefined"
-          ? process.env.BACKEND_URL
-          : "/api/proxy";
+        typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
 
       const res = await fetch(`${baseUrl}/feedback`, {
         method: "GET",
@@ -90,7 +89,9 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
       if (err && err.name === "AbortError") {
         setError("Request timed out. Please try again.");
       } else {
-        setError(err?.message || "Failed to fetch feedback. Please try again later.");
+        setError(
+          err?.message || "Failed to fetch feedback. Please try again later.",
+        );
       }
     } finally {
       setLoading(false);
@@ -122,11 +123,14 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const baseUrl = typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
+      const baseUrl =
+        typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
 
       const idOrKey = feedback.id
         ? encodeURIComponent(feedback.id)
-        : encodeURIComponent(feedback.name || feedback.email || feedback.submitted_at);
+        : encodeURIComponent(
+            feedback.name || feedback.email || feedback.submitted_at,
+          );
       const res = await fetch(`${baseUrl}/feedback/${idOrKey}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
@@ -136,7 +140,9 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
       clearTimeout(timeout);
 
       let json = null;
-      try { json = await res.json(); } catch (_) {}
+      try {
+        json = await res.json();
+      } catch (_) {}
 
       if (!res.ok && !(json && json.success)) {
         const serverMsg = json && (json.error || json.message);
@@ -144,7 +150,9 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
       }
 
       // Remove item from UI by stable key, not by index (indices shift on delete).
-      setFeedbackList((prev) => prev.filter((item) => getFeedbackKey(item) !== key));
+      setFeedbackList((prev) =>
+        prev.filter((item) => getFeedbackKey(item) !== key),
+      );
       setExpanded((s) => {
         const n = new Set(s);
         n.delete(key);
@@ -179,10 +187,13 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
     }
   };
 
-  const uniqueRoles = Array.from(new Set(feedbackList.map((f) => f.role).filter(Boolean)));
+  const uniqueRoles = Array.from(
+    new Set(feedbackList.map((f) => f.role).filter(Boolean)),
+  );
   const filteredList = feedbackList.filter((f) => {
     if (roleFilter && roleFilter !== "all") {
-      if ((f.role || "").toLowerCase() !== (roleFilter || "").toLowerCase()) return false;
+      if ((f.role || "").toLowerCase() !== (roleFilter || "").toLowerCase())
+        return false;
     }
     if (dateFrom) {
       const from = new Date(dateFrom);
@@ -208,7 +219,9 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
               <MessageSquare size={20} className="text-blue-500" />
             </div>
             <div>
-              <h2 className="text-lg font-black font-serif text-foreground">Feedbacks</h2>
+              <h2 className="text-lg font-black font-serif text-foreground">
+                Feedbacks
+              </h2>
               <p className=" font-serif    mt-0.5">
                 View all submitted feedbacks
               </p>
@@ -249,7 +262,10 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
           ) : feedbackList.length === 0 ? (
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
-                <MessageSquare size={32} className="mx-auto text-slate-400 mb-3" />
+                <MessageSquare
+                  size={32}
+                  className="mx-auto text-slate-400 mb-3"
+                />
                 <p className="text-sm font-serif">No feedback available yet.</p>
               </div>
             </div>
@@ -259,8 +275,12 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-2">
                 <div className="flex items-center gap-3">
                   <div className=" font-serif">Total:</div>
-                  <div className="text-foreground font-serif">{feedbackList.length}</div>
-                  <div className=" font-serif">(Showing {filteredList.length})</div>
+                  <div className="text-foreground font-serif">
+                    {feedbackList.length}
+                  </div>
+                  <div className=" font-serif">
+                    (Showing {filteredList.length})
+                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -271,18 +291,41 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
                   >
                     <option value="all">All roles</option>
                     {uniqueRoles.map((r) => (
-                      <option key={r} value={r}>{r}</option>
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
                     ))}
                   </select>
-                  <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="px-3 py-2 rounded-xl border bg-card text-sm" />
-                  <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="px-3 py-2 rounded-xl border bg-card text-sm" />
-                  <button onClick={() => { setRoleFilter("all"); setDateFrom(""); setDateTo(""); }} className="px-3 py-2 bg-slate-500/10 rounded-xl font-serif">Clear</button>
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="px-3 py-2 rounded-xl border bg-card text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="px-3 py-2 rounded-xl border bg-card text-sm"
+                  />
+                  <button
+                    onClick={() => {
+                      setRoleFilter("all");
+                      setDateFrom("");
+                      setDateTo("");
+                    }}
+                    className="px-3 py-2 bg-slate-500/10 rounded-xl font-serif"
+                  >
+                    Clear
+                  </button>
                 </div>
               </div>
 
               {filteredList.length === 0 ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="text-center font-serif">No feedback matches the selected filters.</div>
+                  <div className="text-center font-serif">
+                    No feedback matches the selected filters.
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -304,37 +347,53 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
                         <div className="grid grid-cols-[10fr_12fr_10fr_8fr_11fr_13fr] items-center gap-4">
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="p-1.5 bg-blue-500/10 rounded-lg flex-shrink-0">
-                              <MessageSquare size={16} className="text-blue-500" />
+                              <MessageSquare
+                                size={16}
+                                className="text-blue-500"
+                              />
                             </div>
-                            <p className="text-base font-serif  text-foreground truncate">{feedback.name || "N/A"}</p>
+                            <p className="text-base font-serif  text-foreground truncate">
+                              {feedback.name || "N/A"}
+                            </p>
                           </div>
 
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="p-1.5 bg-emerald-500/10 rounded-lg flex-shrink-0">
                               <Mail size={16} className="text-emerald-500" />
                             </div>
-                            <p className="text-base font-serif text-foreground truncate">{feedback.email || "N/A"}</p>
+                            <p className="text-base font-serif text-foreground truncate">
+                              {feedback.email || "N/A"}
+                            </p>
                           </div>
 
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="p-1.5 bg-amber-500/10 rounded-lg flex-shrink-0">
                               <Building2 size={16} className="text-amber-500" />
                             </div>
-                            <p className="text-base font-serif text-foreground truncate">{feedback.organisation || "N/A"}</p>
+                            <p className="text-base font-serif text-foreground truncate">
+                              {feedback.organisation || "N/A"}
+                            </p>
                           </div>
 
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="p-1.5 bg-violet-500/10 rounded-lg flex-shrink-0">
-                              <Building2 size={16} className="text-violet-500" />
+                              <Building2
+                                size={16}
+                                className="text-violet-500"
+                              />
                             </div>
-                            <p className="text-base font-serif text-foreground truncate">{feedback.role || "N/A"}</p>
+                            <p className="text-base font-serif text-foreground truncate">
+                              {feedback.role || "N/A"}
+                            </p>
                           </div>
 
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="p-1.5 bg-slate-500/10 rounded-lg flex-shrink-0">
                               <Clock size={16} className="text-slate-500" />
                             </div>
-                            <p className="text-base font-serif           text-foreground truncate">{formatDate(feedback.submitted_at)}</p>
+                            <p className="text-base font-serif           text-foreground truncate">
+                              {formatDate(feedback.submitted_at)}
+                            </p>
                           </div>
 
                           <div className="flex items-center justify-end gap-2">
@@ -356,8 +415,12 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
 
                         {expanded.has(key) && (
                           <div className="mt-4 pt-3 border-t border-theme">
-                            <p className="text-[12px] font-serif mb-2">Message</p>
-                            <p className="text-base text-foreground break-words whitespace-pre-wrap">{feedback.message || "No message provided"}</p>
+                            <p className="text-[12px] font-serif mb-2">
+                              Message
+                            </p>
+                            <p className="text-base text-foreground break-words whitespace-pre-wrap">
+                              {feedback.message || "No message provided"}
+                            </p>
                           </div>
                         )}
                       </div>
@@ -382,7 +445,11 @@ export function ViewFeedbackModal({ isOpen, onClose }) {
         <ConfirmModal
           isOpen={confirmOpen}
           title="Delete Feedback"
-          description={toDelete ? `Delete feedback from ${toDelete.feedback.email || toDelete.feedback.name}? This action cannot be undone.` : undefined}
+          description={
+            toDelete
+              ? `Delete feedback from ${toDelete.feedback.email || toDelete.feedback.name}? This action cannot be undone.`
+              : undefined
+          }
           confirmLabel="Delete"
           destructive
           onClose={() => setConfirmOpen(false)}

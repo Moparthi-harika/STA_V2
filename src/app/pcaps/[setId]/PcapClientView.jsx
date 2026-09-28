@@ -1,7 +1,27 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
-import { Search,  Filter,  HardDrive,  Clock,  Activity,Hash, ArrowUp, ArrowDown,  Shield,  Globe,  Shuffle,  X,  ChevronDown,  FileText,  ChevronLeft,  ChevronRight,  LayoutDashboard,Zap,} from "lucide-react";
+import {
+  Search,
+  Filter,
+  HardDrive,
+  Clock,
+  Activity,
+  Hash,
+  ArrowUp,
+  ArrowDown,
+  Shield,
+  Globe,
+  Shuffle,
+  X,
+  ChevronDown,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  LayoutDashboard,
+  Zap,
+} from "lucide-react";
+import Link from "next/link";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import CaptureSummary from "./CaptureSummary";
 import TrafficDistribution from "./TrafficDistribution";
@@ -111,27 +131,32 @@ const StatItem = memo(({ label, value, icon: Icon, color, isSelected }) => {
     rose: "text-rose-500",
     slate: "text-slate-500",
   };
-const iconColor = colorMap[color] || "text-slate-400";
+  const iconColor = colorMap[color] || "text-slate-400";
 
   return (
     <motion.div layout="position" className="flex items-center gap-3 h-9">
-      <div className={`flex items-center justify-center shrink-0 transition-colors ${isSelected ? "text-white" : iconColor}`}>
+      <div
+        className={`flex items-center justify-center shrink-0 transition-colors ${isSelected ? "text-white" : iconColor}`}
+      >
         <Icon size={16} strokeWidth={2.5} />
       </div>
-     <div className="min-w-0">
-  <div className={`text-[16px] font-bold font-sans tabular-nums leading-tight truncate ${isSelected ? "text-white" : "text-foreground"}`}>
-    {value}
-  </div>
-  <div className={`text-[11px] font-semibold font-sans uppercase tracking-wide leading-none mt-1 whitespace-nowrap ${isSelected ? "text-blue-100/60" : "text-slate-500 dark:text-slate-400"}`}>
-    {label}
-  </div>
-</div>
+      <div className="min-w-0">
+        <div
+          className={`text-[16px] font-bold font-sans tabular-nums leading-tight truncate ${isSelected ? "text-white" : "text-foreground"}`}
+        >
+          {value}
+        </div>
+        <div
+          className={`text-[11px] font-semibold font-sans uppercase tracking-wide leading-none mt-1 whitespace-nowrap ${isSelected ? "text-blue-100/60" : "text-slate-500 dark:text-slate-400"}`}
+        >
+          {label}
+        </div>
+      </div>
     </motion.div>
   );
 });
 
 StatItem.displayName = "StatItem";
-
 
 StatItem.propTypes = {
   label: PropTypes.string,
@@ -159,20 +184,22 @@ const PcapCard = memo(({ file, isSelected, onClick }) => {
       }`}
     >
       {/* <div className="relative z-10 flex flex-col items-start text-left gap-1.5 h-[72px]"> */}
-<div className="relative z-10 flex flex-col gap-1.5 h-[60px]">
-  <span className={`font-bold text-[10px] uppercase tracking-[0.12em] whitespace-nowrap ${isSelected ? "text-blue-100/70" : "text-blue-600/70 dark:text-slate-400"}`}>
-    PCAP File :
-  </span>
-  <div className="pr-2">
-    <div
-      className={`font-sans font-bold text-[15px] leading-[1.35] line-clamp-2 tracking-tight h-[36px] ${isSelected ? "text-white" : "text-foreground"}`}
-      title={file.filename}
-    >
-      {file.filename}
-    </div>
-  </div>
-</div>
-      
+      <div className="relative z-10 flex flex-col gap-1.5 h-[60px]">
+        <span
+          className={`font-bold text-[10px] uppercase tracking-[0.12em] whitespace-nowrap ${isSelected ? "text-blue-100/70" : "text-blue-600/70 dark:text-slate-400"}`}
+        >
+          PCAP File :
+        </span>
+        <div className="pr-2">
+          <div
+            className={`font-sans font-bold text-[15px] leading-[1.35] line-clamp-2 tracking-tight h-[36px] ${isSelected ? "text-white" : "text-foreground"}`}
+            title={file.filename}
+          >
+            {file.filename}
+          </div>
+        </div>
+      </div>
+
       {/* Telemetry Matrix */}
       <div className="relative z-10 grid grid-cols-2 gap-x-3 gap-y-9 pt-1">
         <StatItem
@@ -238,6 +265,7 @@ export default function PcapClientView({ setId, initialResponse, session }) {
   // console.log("actual setId:", setId);
   // console.log("Initial response received:", initialResponse);
   // console.log("session:", session);
+  const [pcapMode, setPcapMode] = useState(true);
   const initialData = initialResponse.data || [];
   const stats = initialResponse.repository_stats || {};
 
@@ -260,7 +288,7 @@ export default function PcapClientView({ setId, initialResponse, session }) {
     const url = new URL(window.location.href);
     const pcap = url.searchParams.get("pcap");
     const tab = url.searchParams.get("tab");
-    console.log("first useffect called  (reading urls)")
+    console.log("first useffect called  (reading urls)");
 
     if (pcap) {
       setSelectedPcapId(pcap);
@@ -280,10 +308,10 @@ export default function PcapClientView({ setId, initialResponse, session }) {
       const tab = url.searchParams.get("tab");
       setSelectedPcapId(pcap);
       setActiveTab(tab || "Pcap Summary");
-      console.log("pop state executed")
+      console.log("pop state executed");
     };
     window.addEventListener("popstate", handlePopState);
-    console.log("pop state listener added")
+    console.log("pop state listener added");
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
@@ -320,7 +348,7 @@ export default function PcapClientView({ setId, initialResponse, session }) {
     }
 
     window.history.pushState({}, "", url);
-    console.log("Card clicked, URL updated:", url.toString());
+    // console.log("Card clicked, URL updated:", url.toString());
   }, []);
 
   const handleTabChange = useCallback((tabId) => {
@@ -328,8 +356,7 @@ export default function PcapClientView({ setId, initialResponse, session }) {
     const url = new URL(window.location.href);
     url.searchParams.set("tab", tabId);
     window.history.pushState({}, "", url);
-    console.log("Tab changed to:", tabId);
-    
+    // console.log("Tab changed to:", tabId);
   }, []);
 
   //purpose : when selected pcap changes  , load the requested data and store in the react state
@@ -493,13 +520,7 @@ export default function PcapClientView({ setId, initialResponse, session }) {
     };
 
     loadConnections();
-  }, [
-    selectedFile?.pcap_id,
-    connectionsPage,
-    timeFilter,
-    activeTab,
- 
-  ]);
+  }, [selectedFile?.pcap_id, connectionsPage, timeFilter, activeTab]);
 
   const [selectedIpForSearch, setSelectedIpForSearch] = useState("");
 
@@ -628,212 +649,240 @@ export default function PcapClientView({ setId, initialResponse, session }) {
     <div className="flex flex-col gap-3 pb-10">
       {!selectedFile && (
         <>
-      <div className="flex items-center justify-between shrink-0 pt-1 ">
-       <h1 className="text-[22px] font-bold tracking-tight font-sans text-foreground flex items-center gap-3 ml-6">
-          PCAP Set {setId}
-          <span className="text-amber-500 text-sm font-sans  bg-amber-500/10 px-3 py-1 rounded-none border border-amber-500/20">
-            {stats.total_pcaps || initialData.length} Files
-          </span>
-          {stats.repository_size && (
-            <span className="text-blue-500 text-sm font-medium bg-blue-500/10 px-3 py-1 rounded-none border border-blue-500/20">
-              {formatBytes(stats.repository_size)} Total
-            </span>
-          )}
-          {stats.observed_ips && (
-            <span className="text-emerald-500 text-sm font-medium bg-emerald-500/10 px-3 py-1 rounded-none border border-emerald-500/20">
-              {/* {stats.observed_ips.toLocaleString()} External IPs */}
-              {stats.observed_ips.toLocaleString("en-US")} External IPs
-            </span>
-          )}
-        </h1>
+          <div className="flex items-center justify-between shrink-0 p t-1">
+            <h1 className="text-[22px] font-bold tracking-tight font-sans text-foreground flex items-center gap-3 ml-6">
+              {setId == 1 && "PCAP Set 1"}
+              {setId == 2 && "Sinkhole Packets"}
+              <span className="text-amber-500 text-sm font-sans  bg-amber-500/10 px-3 py-1 rounded-none border border-amber-500/20">
+                {stats.total_pcaps || initialData.length} Files
+              </span>
+              {stats.repository_size && (
+                <span className="text-blue-500 text-sm font-medium bg-blue-500/10 px-3 py-1 rounded-none border border-blue-500/20">
+                  {formatBytes(stats.repository_size)} Total
+                </span>
+              )}
+              {stats.observed_ips && (
+                <span className="text-emerald-500 text-sm font-medium bg-emerald-500/10 px-3 py-1 rounded-none border border-emerald-500/20">
+                  {/* {stats.observed_ips.toLocaleString()} External IPs */}
+                  {stats.observed_ips.toLocaleString("en-US")} External IPs
+                </span>
+              )}
 
-        <div className="relative w-[600px]">
-          <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-          />
-          <input
-            type="text"
-            placeholder="Search pcap files..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2.5 bg-card border border-theme rounded-none text-[13px] font-medium text-foreground focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm placeholder:text-slate-500"
-          />
-        </div>
-      </div>
+              {setId == 2 && (
+                <Link
+                  href="/pcaps/set-2/dnssinkhole"
+                  className="group relative inline-flex items-center gap-2 px-3 py-1.5
+             text-sm font-semibold text-red-500
+             border border-red-500/30
+             bg-red-500/[0.04]
+             hover:bg-red-500/[0.08]
+             hover:border-red-500/50
+             transition-all duration-200"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-60 animate-ping" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+                  </span>
 
-      <div className="flex items-center justify-between bg-card p-2 rounded-xl border border-theme shadow-sm shrink-0">
-        <div className="flex items-center gap-1.5">
-          <Filter size={15} className="text-slate-400 mx-1.5" />
-          <FilterBtn label="Random" />
-          <FilterBtn label="Size" />
-          <FilterBtn label="Duration" />
-          <FilterBtn label="Packets" />
-          <FilterBtn label="External IPs" />
-          <FilterBtn label="Date" />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2 bg-card rounded-md px-2 py-1 border border-theme">
-           <label className="text-[12px] font-medium text-slate-500 font-sans">From</label>
-            <input
-              type="date"
-              value={dateFrom}
-              max={dateTo || undefined}
-              onChange={(e) => {
-                setDateFrom(e.target.value);
-                setCurrentPage(1);
-              }}
-              className=" font-sans px-2 py-1 bg-transparent border border-transparent rounded-md"
-              placeholder="dd/mm/yyyy"
-            />
-           <label className="text-[12px] font-medium text-slate-500 font-sans">To</label>
-            <input
-              type="date"
-              value={dateTo}
-              min={dateFrom || undefined}
-              onChange={(e) => {
-                setDateTo(e.target.value);
-                setCurrentPage(1);
-              }}
-              className=" font-sans px-2 py-1 bg-transparent border border-transparent rounded-md"
-              placeholder="dd/mm/yyyy"
-            />
-            <button
-              onClick={() => {
-                setDateFrom("");
-                setDateTo("");
-                setCurrentPage(1);
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 font-sans rounded-md border transition-all bg-card border-theme  hover:text-foreground hover:bg-slate-500/5`}
-            >
-              Clear
-            </button>
-          </div>
-        </div>
-        <div className="px-4 text-[11px] font-black text-foreground uppercase tracking-widest border-l border-theme ml-2">
-          <span className="text-blue-600">
-            {(currentPage - 1) * itemsPerPage + 1}-
-            {Math.min(currentPage * itemsPerPage, sortedData.length)}
-          </span>{" "}
-          <span className=" px-1 normal-case font-sans">of</span>{" "}
-          <span className="text-foreground fomt-serif">
-            {sortedData.length}
-          </span>{" "}
-          PCAPs
-        </div>
-      </div>
+                  <span>DNS Sinkholing</span>
+                </Link>
+              )}
+            </h1>
 
-      <div
-        className={`transition-all duration-500 ease-in-out overflow-y-auto pr-2 pb-2 overflow-x-hidden custom-scrollbar ${
-          selectedFile ? "h-[32vh]" : "h-[78vh]"
-        }`}
-      >
-        <LayoutGroup>
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 p-2"
-            style={{ contain: "layout paint" }}
-          >
-            <AnimatePresence mode="popLayout" initial={false}>
-              {sortedData
-                .slice(
-                  (currentPage - 1) * itemsPerPage,
-                  currentPage * itemsPerPage,
-                )
-                .map((file, idx) => {
-                  const isSelected = selectedFile?.pcap_id === file.pcap_id;
-
-                  return (
-                    <PcapCard
-                      key={file.pcap_id}
-                      file={file}
-                      isSelected={isSelected}
-                      onClick={() => handleCardClick(file.pcap_id, isSelected)}
-                    />
-                  );
-                })}
-            </AnimatePresence>
-          </motion.div>
-        </LayoutGroup>
-
-        {/* Pagination UI */}
-        {sortedData.length > itemsPerPage && (
-          <div className="flex items-center justify-center gap-2 mt-8 mb-4">
-            <button
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className={`p-2 rounded-lg border transition-all ${
-                currentPage === 1
-                  ? "text-slate-300 border-slate-100 cursor-not-allowed"
-                  : "text-slate-600 border-slate-200 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
-              }`}
-            >
-              <ChevronLeft size={18} />
-            </button>
-
-            <div className="flex items-center gap-1">
-              {Array.from({
-                length: Math.ceil(sortedData.length / itemsPerPage),
-              }).map((_, i) => {
-                const pageNum = i + 1;
-                if (
-                  pageNum === 1 ||
-                  pageNum === Math.ceil(sortedData.length / itemsPerPage) ||
-                  (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
-                ) {
-                  return (
-                    <button
-                      key={pageNum}
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={`min-w-[36px] h-9 px-2 rounded-lg border text-sm font-bold transition-all ${
-                        currentPage === pageNum
-                          ? "bg-blue-500/10 border-blue-500/20 text-blue-600 shadow-sm"
-                          : "bg-card border-theme text-slate-500 hover:border-blue-500 hover:text-blue-600"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                } else if (
-                  pageNum === currentPage - 2 ||
-                  pageNum === currentPage + 2
-                ) {
-                  return (
-                    <span key={pageNum} className="px-1 text-slate-400">
-                      ...
-                    </span>
-                  );
-                }
-                return null;
-              })}
+            <div className="relative w-[600px]">
+              <Search
+                size={15}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
+              <input
+                type="text"
+                placeholder="Search pcap files..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2.5 bg-card border border-theme rounded-none text-[13px] font-medium text-foreground focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm placeholder:text-slate-500"
+              />
             </div>
-
-            <button
-              onClick={() =>
-                setCurrentPage((prev) =>
-                  Math.min(
-                    Math.ceil(sortedData.length / itemsPerPage),
-                    prev + 1,
-                  ),
-                )
-              }
-              disabled={
-                currentPage === Math.ceil(sortedData.length / itemsPerPage)
-              }
-              className={`p-2 rounded-lg border transition-all ${
-                currentPage === Math.ceil(sortedData.length / itemsPerPage)
-                  ? "text-slate-300 border-slate-100 cursor-not-allowed"
-                  : "text-slate-600 border-slate-200 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
-              }`}
-            >
-              <ChevronRight size={18} />
-            </button>
           </div>
-        )}
-      </div>
 
+          <div className="flex items-center justify-between bg-card p-2 rounded-xl border border-theme shadow-sm shrink-0">
+            <div className="flex items-center gap-1.5">
+              <Filter size={15} className="text-slate-400 mx-1.5" />
+              <FilterBtn label="Random" />
+              <FilterBtn label="Size" />
+              <FilterBtn label="Duration" />
+              <FilterBtn label="Packets" />
+              <FilterBtn label="External IPs" />
+              <FilterBtn label="Date" />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 bg-card rounded-md px-2 py-1 border border-theme">
+                <label className="text-[12px] font-medium text-slate-500 font-sans">
+                  From
+                </label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  max={dateTo || undefined}
+                  onChange={(e) => {
+                    setDateFrom(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className=" font-sans px-2 py-1 bg-transparent border border-transparent rounded-md"
+                  placeholder="dd/mm/yyyy"
+                />
+                <label className="text-[12px] font-medium text-slate-500 font-sans">
+                  To
+                </label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  min={dateFrom || undefined}
+                  onChange={(e) => {
+                    setDateTo(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className=" font-sans px-2 py-1 bg-transparent border border-transparent rounded-md"
+                  placeholder="dd/mm/yyyy"
+                />
+                <button
+                  onClick={() => {
+                    setDateFrom("");
+                    setDateTo("");
+                    setCurrentPage(1);
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 font-sans rounded-md border transition-all bg-card border-theme  hover:text-foreground hover:bg-slate-500/5`}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+            <div className="px-4 text-[11px] font-black text-foreground uppercase tracking-widest border-l border-theme ml-2">
+              <span className="text-blue-600">
+                {(currentPage - 1) * itemsPerPage + 1}-
+                {Math.min(currentPage * itemsPerPage, sortedData.length)}
+              </span>{" "}
+              <span className=" px-1 normal-case font-sans">of</span>{" "}
+              <span className="text-foreground fomt-serif">
+                {sortedData.length}
+              </span>{" "}
+              PCAPs
+            </div>
+          </div>
+
+          <div
+            className={`transition-all duration-500 ease-in-out overflow-y-auto pr-2 pb-2 overflow-x-hidden custom-scrollbar ${
+              selectedFile ? "h-[32vh]" : "h-[78vh]"
+            }`}
+          >
+            <LayoutGroup>
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 p-2"
+                style={{ contain: "layout paint" }}
+              >
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {sortedData
+                    .slice(
+                      (currentPage - 1) * itemsPerPage,
+                      currentPage * itemsPerPage,
+                    )
+                    .map((file, idx) => {
+                      const isSelected = selectedFile?.pcap_id === file.pcap_id;
+
+                      return (
+                        <PcapCard
+                          key={file.pcap_id}
+                          file={file}
+                          isSelected={isSelected}
+                          onClick={() =>
+                            handleCardClick(file.pcap_id, isSelected)
+                          }
+                        />
+                      );
+                    })}
+                </AnimatePresence>
+              </motion.div>
+            </LayoutGroup>
+
+            {/* Pagination UI */}
+            {sortedData.length > itemsPerPage && (
+              <div className="flex items-center justify-center gap-2 mt-8 mb-4">
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(1, prev - 1))
+                  }
+                  disabled={currentPage === 1}
+                  className={`p-2 rounded-lg border transition-all ${
+                    currentPage === 1
+                      ? "text-slate-300 border-slate-100 cursor-not-allowed"
+                      : "text-slate-600 border-slate-200 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                  }`}
+                >
+                  <ChevronLeft size={18} />
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {Array.from({
+                    length: Math.ceil(sortedData.length / itemsPerPage),
+                  }).map((_, i) => {
+                    const pageNum = i + 1;
+                    if (
+                      pageNum === 1 ||
+                      pageNum === Math.ceil(sortedData.length / itemsPerPage) ||
+                      (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                    ) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => setCurrentPage(pageNum)}
+                          className={`min-w-[36px] h-9 px-2 rounded-lg border text-sm font-bold transition-all ${
+                            currentPage === pageNum
+                              ? "bg-blue-500/10 border-blue-500/20 text-blue-600 shadow-sm"
+                              : "bg-card border-theme text-slate-500 hover:border-blue-500 hover:text-blue-600"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    } else if (
+                      pageNum === currentPage - 2 ||
+                      pageNum === currentPage + 2
+                    ) {
+                      return (
+                        <span key={pageNum} className="px-1 text-slate-400">
+                          ...
+                        </span>
+                      );
+                    }
+                    return null;
+                  })}
+                </div>
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) =>
+                      Math.min(
+                        Math.ceil(sortedData.length / itemsPerPage),
+                        prev + 1,
+                      ),
+                    )
+                  }
+                  disabled={
+                    currentPage === Math.ceil(sortedData.length / itemsPerPage)
+                  }
+                  className={`p-2 rounded-lg border transition-all ${
+                    currentPage === Math.ceil(sortedData.length / itemsPerPage)
+                      ? "text-slate-300 border-slate-100 cursor-not-allowed"
+                      : "text-slate-600 border-slate-200 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                  }`}
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -850,84 +899,84 @@ export default function PcapClientView({ setId, initialResponse, session }) {
               <div className="mx-6 mt-4 flex items-center overflow-visible rounded-2xl border border-blue-400/40 bg-slate-50 shadow-[0_0_0_1px_rgba(59,130,246,0.06),0_0_25px_rgba(59,130,246,0.10)] dark:border-blue-400/25 dark:bg-slate-900 dark:shadow-[0_0_0_1px_rgba(59,130,246,0.08),0_0_30px_rgba(59,130,246,0.12)]">
                 <div className="flex min-w-0 flex-1 items-center overflow-visible">
                   {TABS.map((tab) => {
-                   if (tab.id === "Reports") {
-  return (
-    <div key={tab.id} className="flex-1 relative group">
-      <button
-        onClick={() => {
-          handleTabChange("Reports");
-          setReportInitialMode("country");
-        }}
-        className={`relative flex w-full h-14 items-center justify-center gap-2.5 px-4 text-[15px] font-semibold transition-all duration-200 border-r border-blue-200/40 dark:border-blue-400/15 ${
-          activeTab === "Reports"
-            ? "text-blue-600 dark:text-blue-400"
-            : "text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
-        }`}
-      >
-        <tab.icon
-          size={16}
-          strokeWidth={2}
-          className={`transition-all duration-200 ${
-            activeTab === "Reports"
-              ? "text-blue-500 drop-shadow-[0_0_7px_rgba(59,130,246,0.7)]"
-              : "text-slate-400 dark:text-slate-500"
-          }`}
-        />
+                    if (tab.id === "Reports") {
+                      return (
+                        <div key={tab.id} className="flex-1 relative group">
+                          <button
+                            onClick={() => {
+                              handleTabChange("Reports");
+                              setReportInitialMode("country");
+                            }}
+                            className={`relative flex w-full h-14 items-center justify-center gap-2.5 px-4 text-[15px] font-semibold transition-all duration-200 border-r border-blue-200/40 dark:border-blue-400/15 ${
+                              activeTab === "Reports"
+                                ? "text-blue-600 dark:text-blue-400"
+                                : "text-slate-700 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+                            }`}
+                          >
+                            <tab.icon
+                              size={16}
+                              strokeWidth={2}
+                              className={`transition-all duration-200 ${
+                                activeTab === "Reports"
+                                  ? "text-blue-500 drop-shadow-[0_0_7px_rgba(59,130,246,0.7)]"
+                                  : "text-slate-400 dark:text-slate-500"
+                              }`}
+                            />
 
-        <span>Reports</span>
+                            <span>Reports</span>
 
-        <ChevronDown
-          size={14}
-          className={`transition-all duration-200 ${
-            activeTab === "Reports"
-              ? "text-blue-500"
-              : "text-blue-500/80 group-hover:text-blue-500 dark:text-blue-400/80 dark:group-hover:text-blue-400"
-          }`}
-        />
+                            <ChevronDown
+                              size={14}
+                              className={`transition-all duration-200 ${
+                                activeTab === "Reports"
+                                  ? "text-blue-500"
+                                  : "text-blue-500/80 group-hover:text-blue-500 dark:text-blue-400/80 dark:group-hover:text-blue-400"
+                              }`}
+                            />
 
-        {activeTab === "Reports" && (
-          <div className="absolute bottom-0 left-6 right-6 h-[2px] rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-        )}
-      </button>
+                            {activeTab === "Reports" && (
+                              <div className="absolute bottom-0 left-6 right-6 h-[2px] rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
+                            )}
+                          </button>
 
-      <div className="invisible absolute left-1/2 top-[calc(100%+8px)] z-50 w-[260px] -translate-x-1/2 translate-y-1 rounded-xl border border-blue-300/40 bg-white p-2 opacity-0 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 dark:border-blue-400/25 dark:bg-slate-900 dark:shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
-        <div className="px-3 pb-2 pt-1">
-          <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
-            Explore reports by
-          </p>
-        </div>
+                          <div className="invisible absolute left-1/2 top-[calc(100%+8px)] z-50 w-[260px] -translate-x-1/2 translate-y-1 rounded-xl border border-blue-300/40 bg-white p-2 opacity-0 shadow-[0_20px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 dark:border-blue-400/25 dark:bg-slate-900 dark:shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
+                            <div className="px-3 pb-2 pt-1">
+                              <p className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
+                                Explore reports by
+                              </p>
+                            </div>
 
-        <button
-          onClick={() => {
-            handleTabChange("Reports");
-            setReportInitialMode("country");
-          }}
-          className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-all ${
-            reportInitialMode === "country"
-              ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
-              : "text-slate-600 hover:bg-blue-500/5 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
-          }`}
-        >
-          Countries
-        </button>
+                            <button
+                              onClick={() => {
+                                handleTabChange("Reports");
+                                setReportInitialMode("country");
+                              }}
+                              className={`flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-all ${
+                                reportInitialMode === "country"
+                                  ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+                                  : "text-slate-600 hover:bg-blue-500/5 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+                              }`}
+                            >
+                              Countries
+                            </button>
 
-        <button
-          onClick={() => {
-            handleTabChange("Reports");
-            setReportInitialMode("isp");
-          }}
-          className={`mt-1 flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-all ${
-            reportInitialMode === "isp"
-              ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
-              : "text-slate-600 hover:bg-blue-500/5 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
-          }`}
-        >
-          ISPs
-        </button>
-      </div>
-    </div>
-  );
-}
+                            <button
+                              onClick={() => {
+                                handleTabChange("Reports");
+                                setReportInitialMode("isp");
+                              }}
+                              className={`mt-1 flex w-full items-center rounded-lg px-3 py-2.5 text-left text-sm font-semibold transition-all ${
+                                reportInitialMode === "isp"
+                                  ? "bg-blue-500/10 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
+                                  : "text-slate-600 hover:bg-blue-500/5 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+                              }`}
+                            >
+                              ISPs
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
                     return (
                       <button
                         key={tab.id}
@@ -1054,7 +1103,7 @@ export default function PcapClientView({ setId, initialResponse, session }) {
                         customFetchGeo={fetchPcapGeoReport}
                         customFetchDetails={fetchPcapDetails}
                         customTriggerExport={triggerPcapExport}
-                      session={session}
+                        session={session}
                       />
                     ) : (
                       <div className="bg-slate-500/5 border border-theme border-dashed rounded-[3rem] flex items-center justify-center text-slate-500 h-[500px] font-black text-xs uppercase tracking-widest opacity-40">

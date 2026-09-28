@@ -3,7 +3,15 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { X, AlertTriangle } from "lucide-react";
 
-export function ConfirmModal({ isOpen, title = "Confirm", description, confirmLabel = "Confirm", onClose, onConfirm, destructive = false }) {
+export function ConfirmModal({
+  isOpen,
+  title = "Confirm",
+  description,
+  confirmLabel = "Confirm",
+  onClose,
+  onConfirm,
+  destructive = false,
+}) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -34,8 +42,12 @@ export function ConfirmModal({ isOpen, title = "Confirm", description, confirmLa
                 <AlertTriangle size={30} strokeWidth={1.2} />
               </div>
 
-              <h3 className="text-xl font-serif text-foreground mb-2 ">{title}</h3>
-              {description && <p className="text-slate-500 text-[14px] mb-6">{description}</p>}
+              <h3 className="text-xl font-serif text-foreground mb-2 ">
+                {title}
+              </h3>
+              {description && (
+                <p className="text-slate-500 text-[14px] mb-6">{description}</p>
+              )}
 
               <div className="flex gap-3">
                 <button
@@ -46,7 +58,7 @@ export function ConfirmModal({ isOpen, title = "Confirm", description, confirmLa
                 </button>
                 <button
                   onClick={onConfirm}
-                  className={`flex-1 px-4 py-3 text-[13px] font-black text-white rounded-xl transition-all active:scale-95 ${destructive ? 'bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/20' : 'bg-blue-600 hover:bg-blue-500'}`}
+                  className={`flex-1 px-4 py-3 text-[13px] font-black text-white rounded-xl transition-all active:scale-95 ${destructive ? "bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-600/20" : "bg-blue-600 hover:bg-blue-500"}`}
                 >
                   {confirmLabel}
                 </button>

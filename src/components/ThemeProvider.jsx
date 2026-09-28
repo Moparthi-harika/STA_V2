@@ -9,9 +9,9 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     let savedTheme = localStorage.getItem("app-theme") || "light";
-    
+
     if (savedTheme === "dark") savedTheme = "light";
-    
+
     setTheme(savedTheme);
     document.documentElement.setAttribute("data-theme", savedTheme);
   }, []);

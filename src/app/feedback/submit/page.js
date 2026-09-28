@@ -23,7 +23,10 @@ export default function SubmitFeedbackPage() {
     setStatus(null);
 
     if (!formData.name || !formData.email || !formData.message) {
-      setStatus({ type: "error", text: "Name, email and message are required." });
+      setStatus({
+        type: "error",
+        text: "Name, email and message are required.",
+      });
       return;
     }
 
@@ -33,7 +36,8 @@ export default function SubmitFeedbackPage() {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const baseUrl = typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
+      const baseUrl =
+        typeof window === "undefined" ? process.env.BACKEND_URL : "/api/proxy";
 
       const body = new URLSearchParams({
         name: formData.name,
@@ -59,18 +63,27 @@ export default function SubmitFeedbackPage() {
       }
 
       if (res.ok || json.success) {
-        setStatus({ type: "success", text: "✓ Feedback submitted successfully. Thank you!" });
+        setStatus({
+          type: "success",
+          text: "✓ Feedback submitted successfully. Thank you!",
+        });
 
         // Stay on /feedback/submit
         setFormData({ name: "", email: "", organisation: "", message: "" });
       } else {
-        setStatus({ type: "error", text: json.error || `Submission failed (${res.status}).` });
+        setStatus({
+          type: "error",
+          text: json.error || `Submission failed (${res.status}).`,
+        });
       }
     } catch (err) {
       clearTimeout(timeout);
 
       if (err.name === "AbortError") {
-        setStatus({ type: "error", text: "Request timed out. Please try again." });
+        setStatus({
+          type: "error",
+          text: "Request timed out. Please try again.",
+        });
       } else {
         setStatus({ type: "error", text: "Network error. Please try again." });
       }
@@ -93,7 +106,9 @@ export default function SubmitFeedbackPage() {
               <MessageSquare size={20} className="text-blue-500" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold font-serif text-foreground">Submit Feedback</h2>
+              <h2 className="text-lg font-semibold font-serif text-foreground">
+                Submit Feedback
+              </h2>
               <p className="font-serif mt-0.5">Share your valuable feedback</p>
             </div>
           </div>
@@ -142,7 +157,9 @@ export default function SubmitFeedbackPage() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  onInvalid={(e) => e.target.setCustomValidity("enter valid email address")}
+                  onInvalid={(e) =>
+                    e.target.setCustomValidity("enter valid email address")
+                  }
                   onInput={(e) => e.target.setCustomValidity("")}
                   required
                   className="w-full bg-slate-500/5 border border-theme rounded-xl px-4 py-3 text-sm font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"

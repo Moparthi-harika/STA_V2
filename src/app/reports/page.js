@@ -4,7 +4,7 @@ import ReportsClientView from "./ReportsClientView";
 
 export default async function ReportsPage() {
   const session = await auth();
-  
+
   if (!session) redirect("/");
 
   return (

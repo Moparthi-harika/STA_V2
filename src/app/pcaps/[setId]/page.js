@@ -7,20 +7,18 @@ import { fetchPcapSet } from "./apiService";
 
 export default async function PcapSetPage({ params }) {
   const session = await auth();
-  
+
   if (!session) redirect("/");
   if (!session.user?.roles?.includes("admin")) redirect("/reports");
   if (!session.accessToken) {
     console.error("Missing access token while loading PCAP set page");
     return <PcapErrorView />;
   }
-  
+
   const resolvedParams = await params;
   const setId = resolvedParams.setId;
-  
- 
-  const actualId = setId.replace("set-", "");
 
+  const actualId = setId.replace("set-", "");
 
   let pcapResponse;
   try {
@@ -32,7 +30,13 @@ export default async function PcapSetPage({ params }) {
     return <PcapErrorView />;
   }
 
-  return <PcapClientView setId={actualId} initialResponse={pcapResponse} session={session} />;
+  return (
+    <PcapClientView
+      setId={actualId}
+      initialResponse={pcapResponse}
+      session={session}
+    />
+  );
 }
 
 PcapSetPage.propTypes = {

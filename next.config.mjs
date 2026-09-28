@@ -1,7 +1,7 @@
 const nextConfig = {
-  output: 'standalone',
+  output: "standalone",
   reactCompiler: true,
-   eslint: {
+  eslint: {
     ignoreDuringBuilds: true,
   },
 };
