@@ -1,171 +1,300 @@
 "use client";
 
-import { useState ,useEffect} from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import DomainSidebar from "./components/DomainSidebar";
 import DomainMap from "./components/DomainMap";
 import DomainPcaps from "./components/DomainPcaps";
 import DomainIsp from "./components/DomainIsp";
 import DomainIp from "./components/DomainIp";
 import IpSearch from "./components/IpSearch";
-import {Search} from "lucide-react";
-
-
-export default function DomainwiseClient({ dnsData ,session}) {
-    const total_domains = dnsData.length;
-    const[selectedDomain,setSelectedDomain]=useState(null);
-    const[activeTab,setActiveTab]=useState("Map");
-    const[searchDomain,setSearchDomain]=useState("");
-
+import { Search, Globe, ChevronRight, Activity } from "lucide-react";
+import {
     
+    Map,
+    FileText,
+    Server,
+    Network,
+} from "lucide-react";
+const DOMAIN_TABS = [
+    { id: "Map", icon: Map },
+    { id: "PCAPs", icon: FileText },
+    { id: "ISP", icon: Server },
+    { id: "IP", icon: Network },
+    { id: "IPSearch", icon: Search },
+];
 
-    useEffect(() => {
-        const url = new URL(window.location.href);
-        const domain = url.pathname.split("/").pop();
+export default function DomainwiseClient({ dnsData, session }) {
+  
+  const total_domains = dnsData.length;
+  const [selectedDomain, setSelectedDomain] = useState(null);
+  const [activeTab, setActiveTab] = useState("Map");
+  const [searchDomain, setSearchDomain] = useState("");
+  const [selectedIp, setSelectedIp] = useState("");
 
-        if (domain !== "dnssinkhole") {
-            const item = dnsData.find((item) => item.host === domain);
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const domain = url.pathname.split("/").pop();
 
-            if(item) {
-                setSelectedDomain(item);
-            }
-        }
-    }, [dnsData]);  
-    useEffect(() => {
-    const handlePopState = () => {
-            const url = new URL(window.location.href);
-            const domain = url.pathname.split("/").pop();
+    if (domain !== "dnssinkhole") {
+      const item = dnsData.find((item) => item.host === domain);
 
-            if (domain === "dnssinkhole") {
-            setSelectedDomain(null);
-            } else {
-                const item = dnsData.find((item) => item.host === domain);
-
-                if (item) {
-                    setSelectedDomain(item);
-                }
-            }
-        };
-
-         window.addEventListener("popstate", handlePopState);
-
-         return () => {
-            window.removeEventListener("popstate", handlePopState);
-        };
-    }, [dnsData]);
-
-    const handleDomainClick =(item)=>{
+      if (item) {
         setSelectedDomain(item);
-
-        const url = new URL(window.location.href);
-
-        // url.pathname = `${url.pathname}/${item.host}`;
-        url.pathname = `/pcaps/set-2/dnssinkhole/${item.host}`;
-        window.history.pushState({}, "", url);
-    };
-     
-    const handleClose =()=>{
-        const url = new URL(window.location.href);
-        url.pathname = "/pcaps/set-2/dnssinkhole";
-        window.history.pushState({},"",url);
-        window.dispatchEvent(new PopStateEvent("popstate"));
+      }
     }
+  }, [dnsData]);
+  useEffect(() => {
+    const handlePopState = () => {
+      const url = new URL(window.location.href);
+      const domain = url.pathname.split("/").pop();
 
-    const filterDomains = dnsData.filter((item)=>
-        item.host.toLowerCase().includes(searchDomain.toLowerCase())
-    );
+      if (domain === "dnssinkhole") {
+        setSelectedDomain(null);
+      } else {
+        const item = dnsData.find((item) => item.host === domain);
+
+        if (item) {
+          setSelectedDomain(item);
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [dnsData]);
+  useEffect(() => {
+    if (selectedDomain) {
+        setActiveTab("Map");
+        setSelectedIp("");
+    }
+}, [selectedDomain]);
+
+  const handleDomainClick = (item) => {
+    setSelectedDomain(item);
+
+    const url = new URL(window.location.href);
+
+    // url.pathname = `${url.pathname}/${item.host}`;
+    url.pathname = `/pcaps/set-2/dnssinkhole/${item.host}`;
+    window.history.pushState({}, "", url);
+  };
+
+  const handleClose = () => {
+    const url = new URL(window.location.href);
+    url.pathname = "/pcaps/set-2/dnssinkhole";
+    window.history.pushState({}, "", url);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
+  const filterDomains = dnsData.filter((item) =>
+    item.host.toLowerCase().includes(searchDomain.toLowerCase()),
+  );
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab != "IPSearch") {
+      setSelectedIp("");
+    }
+  };
 
   return (
-    <div className="flex flex-col gap-3 pb-10">
-        {!selectedDomain &&(
-            <>
-                <div className="flex flex-row items-center justify-between ">
-                    <h1 className="text-[22px] font-bold tracking-tight font-sans text-foreground flex items-center gap-3 ml-6">
-                        DNS Sinkhole
-                    <span className="text-amber-500 text-sm font-sans  bg-amber-500/10 px-3 py-1 rounded-none border border-amber-500/20">
-                     Total Domains : {total_domains} </span>
-                    </h1>
-                    <div className="relative w-120 mr-3">
-                        <Search
-                          size={15}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-                        <input 
-                        type="text"
-                        placeholder="Search Domain..."
-                        value ={searchDomain}
-                        onChange={(e)=>{setSearchDomain(e.target.value)}}
-                        className="w-full mr-6 pl-9 pr-3 py-2.5 bg-card border border-theme rounded-none text-[13px] font-medium text-foreground focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all shadow-sm placeholder:text-slate-500"
-                        />
-                    </div>
-                </div>
-                {filterDomains.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 p-2">
-                    {filterDomains.map((item)=>(
-                        <div 
-                        key ={item.host}
-                        onClick={() => handleDomainClick(item)}
-                        className="border border-theme rounded-xl p-4 bg-card"
-                        >
-                            {item.host}
-                        </div>
-                    ))}
-                </div>  
-                ) :(
-                    <div className="p-6 text-center text-muted-foreground">
-                         No domains found
-                    </div>
-                )}
-            </>
-        )}
-        {selectedDomain &&(
-            <>
-            <div className="mx-8 px-5 py-4 rounded-xl border border-theme bg-card shadow-sm flex items-center gap-6">
-                <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                        Domain
-                    </p>
-                    <h2 className="text-xl font-semibold  text-foreground">
-                        {selectedDomain.host}
-                    </h2>
-                </div>
-                <div className="h-8 w-px bg-border" />
-                <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                         Requests
-                    </p>
-                     <p className="text-lg font-semibold text-amber-500">
-                        {selectedDomain.request_count}
-                    </p>
-                </div>
-                <button
-                    onClick={handleClose}
-                    className="flex h-14 w-14 shrink-0 ml-auto items-center justify-center rounded-r-2xl border-l border-blue-200/40 bg-rose-500/5 text-rose-500 transition-all hover:bg-rose-500 hover:text-white dark:border-blue-400/15"
+    <div className="flex flex-col  pb-10">
+      {!selectedDomain && (
+        <>
+          <div className="flex items-center justify-between gap-4 px-6 pt-2 pb-4">
+            <h1 className="flex items-center gap-3 text-[22px] font-bold tracking-tight text-foreground">
+              DNS Sinkhole
+              <span className="flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-500">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+                {total_domains} Domains
+              </span>
+            </h1>
+
+            <div className="group relative w-full max-w-md">
+              <Search
+                size={15}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-blue-500"
+              />
+              <input
+                type="text"
+                placeholder="Search domain..."
+                value={searchDomain}
+                onChange={(e) => setSearchDomain(e.target.value)}
+                className="w-full rounded-xl border border-theme bg-card py-2.5 pl-10 pr-3 text-[13px] font-medium text-foreground shadow-sm transition-all placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10"
+              />
+            </div>
+          </div>
+
+          {filterDomains.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 px-6 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {filterDomains.map((item) => (
+                <div
+                  key={item.host}
+                  onClick={() => handleDomainClick(item)}
+                  className="group relative flex cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-theme bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
                 >
-                    <X
-                        size={20}
-                        className="group-hover:rotate-90 transition-transform duration-300"
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 transition-colors group-hover:bg-blue-500 group-hover:text-white">
+                    <Globe size={16} />
+                  </div>
+                  <span
+                    className="truncate text-[13px] font-medium text-foreground"
+                    title={item.host}
+                  >
+                    {item.host}
+                  </span>
+                  <ChevronRight
+                    size={14}
+                    className="ml-auto shrink-0 -translate-x-1 text-slate-400 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mx-6 flex flex-col items-center gap-2 rounded-xl border border-dashed border-theme py-16 text-muted-foreground">
+              <Search size={22} className="opacity-50" />
+              <span className="text-sm">No domains found</span>
+            </div>
+          )}
+        </>
+      )}
+
+      {selectedDomain && (
+        <>
+          <div className="relative mx-8 mb-2 flex items-center gap-5 overflow-hidden  border border-theme bg-card px-5 py-4 shadow-sm">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20">
+              <Globe size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Domain
+              </p>
+              <h2 className="truncate text-xl font-semibold tracking-tight text-foreground">
+                {selectedDomain.host}
+              </h2>
+            </div>
+            <div className="h-8 w-px bg-border" />
+            <div>
+              <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Requests
+              </p>
+              <p className="flex items-center gap-1.5 text-lg font-semibold tabular-nums text-amber-500">
+                <Activity size={15} />
+                {Number(selectedDomain.request_count).toLocaleString()}
+              </p>
+            </div>
+            <button
+              onClick={handleClose}
+              title="Close"
+              className="group ml-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-rose-500/20 bg-rose-500/5 text-rose-500 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"
+            >
+              <X
+                size={18}
+                className="transition-transform duration-300 group-hover:rotate-90"
+              />
+            </button>
+          </div>
+          <div className="mx-8">
+
+    {/* TOP TABS */}
+    <div className="flex items-center bg-card border border-theme rounded-xl overflow-hidden">
+
+        {DOMAIN_TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+
+            return (
+                <button
+                    key={tab.id}
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`
+                        relative flex-1
+                        h-14
+                        flex items-center justify-center
+                        gap-2
+                        text-sm
+                        font-semibold
+                        transition-all duration-200
+                        border-r border-theme
+                        last:border-r-0
+                        ${
+                            isActive
+                                ? "text-amber-500 bg-amber-500/5"
+                                : "text-foreground hover:text-amber-500 hover:bg-amber-500/5"
+                        }
+                    `}
+                >
+
+                    <Icon
+                        size={16}
+                        className={
+                            isActive
+                                ? "text-amber-500"
+                                : "text-muted-foreground"
+                        }
                     />
+
+                    <span>
+                        {tab.id === "IPSearch"
+                            ? "IP Search"
+                            : tab.id}
+                    </span>
+
+                    {isActive && (
+                        <div className="absolute bottom-0 left-6 right-6 h-[2px] bg-amber-500" />
+                    )}
+
                 </button>
-            </div>
-            <div className="flex mt-4 mx-4  gap-4">
-                {/* side bar */}
-                <div className="w-48 shrink-0 border border-theme rounded-xl bg-card p-2">
-                    <DomainSidebar     activeTab={activeTab} setActiveTab={setActiveTab} />
-                </div>
-                {/* main content  */}
-                <div className="flex-1 min-h-[500px] border border-theme rounded-xl bg-card p-4">
-                    {activeTab === "Map" && <DomainMap />}
-                    {activeTab === "PCAPs" && <DomainPcaps selectedDomain={selectedDomain} />}
-                    {activeTab === "ISP" && <DomainIsp selectedDomain={selectedDomain} />}
-                    {activeTab === "IP" && <DomainIp />}
-                    {activeTab === "IPSearch" && <IpSearch />}
-                </div>
-            </div>
-            </>
+            );
+        })}
+
+    </div>
+
+
+    {/* CONTENT */}
+    <div className="mt-4 border border-theme rounded-xl bg-card p-4 min-h-[calc(100vh-300px)]">
+
+        {activeTab === "Map" && (
+            <DomainMap
+                selectedDomain={selectedDomain}
+                setActiveTab={setActiveTab}
+                setSelectedIp={setSelectedIp}
+            />
         )}
 
-      
+        {activeTab === "PCAPs" && (
+            <DomainPcaps
+                selectedDomain={selectedDomain}
+            />
+        )}
+
+        {activeTab === "ISP" && (
+            <DomainIsp
+                selectedDomain={selectedDomain}
+            />
+        )}
+
+        {activeTab === "IP" && (
+            <DomainIp
+                selectedDomain={selectedDomain}
+                setActiveTab={setActiveTab}
+                setSelectedIp={setSelectedIp}
+            />
+        )}
+
+        {activeTab === "IPSearch" && (
+            <IpSearch
+                initialIp={selectedIp}
+            />
+        )}
+
+    </div>
+
+</div>
+        </>
+      )}
     </div>
   );
 }

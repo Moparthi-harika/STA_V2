@@ -1,7 +1,7 @@
-export default function  DomainMap(){
-    return(
-        <>
-        maps
-        </>
-    )
+export default function DomainMap(){
+  return(
+    <div>
+      Map
+    </div>
+  )
 }
