@@ -71,8 +71,7 @@ export default function DomainMap({
   const error = mapState?.host === domainHost ? mapState.error : "";
 
   const locatedIps = useMemo(() => {
-    const mapRecords =
-      mapState?.host === domainHost ? mapState.records : [];
+    const mapRecords = mapState?.host === domainHost ? mapState.records : [];
     const wantedIps = new Set(connectedIps.map((record) => record.ip));
     const recordsByIp = new Map();
 
@@ -115,7 +114,8 @@ export default function DomainMap({
 
       {!loading && locatedIps.length === 0 && (
         <div className="absolute bottom-3 left-3 right-3 z-[800] rounded-lg border border-amber-500/20 bg-card/95 px-3 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur">
-          {error || "No location coordinates are available for this domain's IPs."}
+          {error ||
+            "No location coordinates are available for this domain's IPs."}
         </div>
       )}
     </div>

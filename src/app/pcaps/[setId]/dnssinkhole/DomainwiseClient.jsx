@@ -14,6 +14,7 @@ import {
   ArrowUp,
   ArrowDown,
   Filter,
+  Hash,
 } from "lucide-react";
 import { Map, FileText, Server, Network } from "lucide-react";
 const DOMAIN_TABS = [
@@ -265,11 +266,11 @@ export default function DomainwiseClient({ dnsData, session }) {
                   }
                 }}
                 className={`border flex items-center px-4 py-2 text-sm rounded-md font-medium text-foreground border-theme bg-card transition-all duration-200
-  ${
-    sortBy === option.id
-      ? "!border-blue-500 !bg-blue-500 !text-white shadow-sm"
-      : "border-theme bg-card text-foreground hover:border-blue-500 hover:text-blue-500"
-  }`}
+                ${
+                  sortBy === option.id
+                    ? "!border-blue-500 !bg-blue-500 !text-white shadow-sm"
+                    : "border-theme bg-card text-foreground hover:border-blue-500 hover:text-blue-500"
+                }`}
               >
                 <span>{option.label} </span>
                 {sortBy === option.id &&
@@ -282,7 +283,7 @@ export default function DomainwiseClient({ dnsData, session }) {
             ))}
           </div>
           {sortedDomains.length > 0 ? (
-            <div className="mx-6 flex-1 min-h-0 overflow-y-auto border-2 mb-2 border-theme  p-4">
+            <div className="mx-6 mb-2 flex-1 min-h-0 overflow-y-auto rounded-2xl border border-theme bg-card/40 p-5 shadow-sm">
               <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {sortedDomains.map((item) => (
                   <div
@@ -295,30 +296,54 @@ export default function DomainwiseClient({ dnsData, session }) {
                       }
                     }}
                     onClick={() => handleDomainClick(item)}
-                    className="group relative flex cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-theme bg-card p-4 shadow-sm transition-all duration-200  hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
+                    className="group relative flex min-h-[180px] cursor-pointer flex-col items-center gap-3 overflow-hidden rounded-xl border border-blue-100 p-4 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-100"
                   >
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 transition-colors group-hover:bg-blue-500 group-hover:text-white">
-                      <Globe size={16} />
-                    </div>
-                    <div className="min-w-0">
+                    <div className="flex min-w-0 items-center gap-3">
                       <span
-                        className="block truncate text-[13px] font-medium text-foreground"
+                        className="min-w-0 truncate text-[14px] font-semibold tracking-tight text-foreground"
                         title={item.host}
                       >
                         {item.host}
                       </span>
-                      <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
-                        <span>
-                          {Number(item.request_count).toLocaleString()} requests
+                    </div>
+                    <div className="w-full mt-2 px-2">
+                      <div className="grid w-full grid-cols-2 text-[16px] gap-8 text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Activity size={16} className="text-emerald-500" />
+
+                          <div className="flex flex-col">
+                            <span className="text-foreground font-bold">
+                              {Number(item.request_count).toLocaleString()}
+                            </span>
+                            <span className="text-[14px] text-muted-foreground">
+                              requests
+                            </span>
+                          </div>
                         </span>
-                        <span>
-                          {Number(item.connected_ip_count).toLocaleString()}{" "}
-                          Connected IPs
+
+                        <span className="flex items-center gap-1.5">
+                          <Hash size={16} className="text-violet-500" />
+                          <div className="flex flex-col">
+                            <span className="text-foreground font-bold">
+                              {Number(item.connected_ip_count).toLocaleString()}
+                            </span>
+                            <span className="text-[14px] text-muted-foreground">
+                              IPs
+                            </span>
+                          </div>
                         </span>
                       </div>
-                      <div className="text-[11px] flex gap-3 mt-1 items-center text-muted-foreground">
-                        <span>
-                          {Number(item.pcap_ids.length).toLocaleString()} PCAP's
+                      <div className="mt-8 flex w-full items-center text-[16px] text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <FileText size={16} className="text-orange-500" />
+                          <div className="flex flex-col">
+                            <span className="text-foreground font-bold">
+                              {Number(item.pcap_ids.length).toLocaleString()}
+                            </span>
+                            <span className="text-[14px] text-muted-foreground">
+                              PCAPs
+                            </span>
+                          </div>
                         </span>
                         <span></span>
                       </div>
