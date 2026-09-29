@@ -1,13 +1,20 @@
 "use client";
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { X } from "lucide-react";
 import DomainMap from "./components/DomainMap";
 import DomainPcaps from "./components/DomainPcaps";
 import DomainIsp from "./components/DomainIsp";
 import DomainIp from "./components/DomainIp";
 import IpSearch from "./components/IpSearch";
-import { Search, Globe, ChevronRight, Activity } from "lucide-react";
+import {
+  Search,
+  Globe,
+  ChevronRight,
+  Activity,
+  ArrowUp,
+  ArrowDown,
+  Filter,
+} from "lucide-react";
 import { Map, FileText, Server, Network } from "lucide-react";
 const DOMAIN_TABS = [
   { id: "Map", icon: Map },
@@ -17,12 +24,26 @@ const DOMAIN_TABS = [
   { id: "IPSearch", icon: Search },
 ];
 
+const SORT_OPTIONS = [
+  { id: "random", label: "Random" },
+  { id: "name", label: "Alphabetical" },
+  { id: "requests", label: "Requests" },
+  { id: "ips", label: "Connected IPs" },
+  { id: "pcaps", label: "PCAPs" },
+];
 export default function DomainwiseClient({ dnsData, session }) {
   const total_domains = dnsData.length;
   const [selectedDomain, setSelectedDomain] = useState(null);
   const [activeTab, setActiveTab] = useState("Map");
   const [searchDomain, setSearchDomain] = useState("");
   const [selectedIp, setSelectedIp] = useState("");
+
+  const [sortBy, setSortBy] = useState("random");
+  const [sortDirection, setSortDirection] = useState("asc");
+  const [randomOrder, setRandomOrder] = useState([]);
+
+  const cardRefs = useRef(new globalThis.Map());
+  const previousPositions = useRef(new globalThis.Map());
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -64,6 +85,13 @@ export default function DomainwiseClient({ dnsData, session }) {
       setSelectedIp("");
     }
   }, [selectedDomain]);
+  useEffect(() => {
+    if (sortBy === "random") {
+      const shuffled = [...filterDomains].sort(() => Math.random() - 0.5);
+
+      setRandomOrder(shuffled);
+    }
+  }, [searchDomain, dnsData]);
 
   const handleDomainClick = (item) => {
     setSelectedDomain(item);
@@ -86,6 +114,97 @@ export default function DomainwiseClient({ dnsData, session }) {
     item.host.toLowerCase().includes(searchDomain.toLowerCase()),
   );
 
+  const sortedDomains =
+    sortBy === "random" && randomOrder.length > 0
+      ? randomOrder.filter((item) =>
+          item.host.toLowerCase().includes(searchDomain.toLowerCase()),
+        )
+      : [...filterDomains].sort((a, b) => {
+          if (sortBy == "random") {
+            return 0;
+          }
+          let valueA;
+          let valueB;
+
+          switch (sortBy) {
+            case "name":
+              valueA = a.host.toLowerCase();
+              valueB = b.host.toLowerCase();
+              break;
+
+            case "requests":
+              valueA = Number(a.request_count) || 0;
+              valueB = Number(b.request_count) || 0;
+              break;
+
+            case "ips":
+              valueA = Number(a.connected_ip_count) || 0;
+              valueB = Number(b.connected_ip_count) || 0;
+              break;
+
+            case "pcaps":
+              valueA = Array.isArray(a.pcap_ids) ? a.pcap_ids.length : 0;
+              valueB = Array.isArray(b.pcap_ids) ? b.pcap_ids.length : 0;
+              break;
+
+            default:
+              return 0;
+          }
+          if (sortDirection === "asc") {
+            return typeof valueA === "string"
+              ? valueA.localeCompare(valueB)
+              : valueA - valueB;
+          }
+          return typeof valueA === "string"
+            ? valueB.localeCompare(valueA)
+            : valueB - valueA;
+        });
+
+  useLayoutEffect(() => {
+    if (previousPositions.current.size === 0) return;
+
+    cardRefs.current.forEach((element, host) => {
+      const previous = previousPositions.current.get(host);
+
+      if (!previous || !element) return;
+
+      const current = element.getBoundingClientRect();
+
+      const deltaX = previous.left - current.left;
+      const deltaY = previous.top - current.top;
+
+      if (deltaX === 0 && deltaY === 0) return;
+
+      element.animate(
+        [
+          {
+            transform: `translate(${deltaX}px, ${deltaY}px)`,
+          },
+          {
+            transform: "translate(0, 0)",
+          },
+        ],
+        {
+          duration: 700,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        },
+      );
+    });
+
+    previousPositions.current.clear();
+  }, [sortedDomains]);
+  const captureCardPositions = () => {
+    const positions = new globalThis.Map();
+
+    cardRefs.current.forEach((element, host) => {
+      if (element) {
+        positions.set(host, element.getBoundingClientRect());
+      }
+    });
+
+    previousPositions.current = positions;
+  };
+
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     if (tab != "IPSearch") {
@@ -94,13 +213,13 @@ export default function DomainwiseClient({ dnsData, session }) {
   };
 
   return (
-<div className="flex h-[calc(100vh-56px)] flex-col overflow-hidden">
+    <div className="flex h-[calc(100vh-56px)] flex-col overflow-hidden">
       {!selectedDomain && (
         <>
           <div className="flex items-center justify-between gap-4 px-6 pt-2 pb-4">
             <h1 className="flex items-center gap-3 text-[22px] font-bold tracking-tight text-foreground">
               DNS Sinkhole
-              <span className="flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-500">
+              <span className="flex items-center gap-1.5  border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-xs font-semibold text-amber-500">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
                 {total_domains} Domains
               </span>
@@ -120,38 +239,98 @@ export default function DomainwiseClient({ dnsData, session }) {
               />
             </div>
           </div>
-          {filterDomains.length > 0 ? (
-          <div className="mx-6 flex-1 min-h-0 overflow-y-auto border-2 mb-2 border-theme  p-4">
-          <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {filterDomains.map((item) => (
-                <div
-                  key={item.host}
-                  onClick={() => handleDomainClick(item)}
-                  className="group relative flex cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-theme bg-card p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 transition-colors group-hover:bg-blue-500 group-hover:text-white">
-                    <Globe size={16} />
-                  </div>
-                  <div className="min-w-0">
-                    <span
-                      className="block truncate text-[13px] font-medium text-foreground"
-                      title={item.host}
-                    >
-                      {item.host}
-                    </span>
-
-                    <span className="mt-1  items-center gap-1 text-[11px] text-muted-foreground">
-                      {Number(item.request_count).toLocaleString()} requests
-                    </span>
-                  </div>
-                  <ChevronRight
-                    size={14}
-                    className="ml-auto shrink-0 -translate-x-1 text-slate-400 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100"
-                  />
-                </div>
-              ))}
-            </div>
+          <div className="mx-6 mb-2 flex px-3 py-2 items-center gap-2 border border-theme bg-card rounded-xl shadow-sm">
+            <Filter
+              size={18}
+              className="text-muted-foreground mx-2 text-slate-500"
+            />
+            {SORT_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => {
+                  captureCardPositions();
+                  if (option.id === "random") {
+                    const shuffled = [...filterDomains].sort(
+                      () => Math.random() - 0.5,
+                    );
+                    setRandomOrder(shuffled);
+                    setSortBy("random");
+                    return;
+                  }
+                  if (sortBy === option.id) {
+                    setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+                  } else {
+                    setSortBy(option.id);
+                    setSortDirection("asc");
+                  }
+                }}
+                className={`border flex items-center px-4 py-2 text-sm rounded-md font-medium text-foreground border-theme bg-card transition-all duration-200
+  ${
+    sortBy === option.id
+      ? "!border-blue-500 !bg-blue-500 !text-white shadow-sm"
+      : "border-theme bg-card text-foreground hover:border-blue-500 hover:text-blue-500"
+  }`}
+              >
+                <span>{option.label} </span>
+                {sortBy === option.id &&
+                  (sortDirection === "asc" ? (
+                    <ArrowUp size={14} />
+                  ) : (
+                    <ArrowDown size={14} />
+                  ))}
+              </button>
+            ))}
           </div>
+          {sortedDomains.length > 0 ? (
+            <div className="mx-6 flex-1 min-h-0 overflow-y-auto border-2 mb-2 border-theme  p-4">
+              <div className="grid grid-cols-1 gap-4 pb-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {sortedDomains.map((item) => (
+                  <div
+                    key={item.host}
+                    ref={(el) => {
+                      if (el) {
+                        cardRefs.current.set(item.host, el);
+                      } else {
+                        cardRefs.current.delete(item.host);
+                      }
+                    }}
+                    onClick={() => handleDomainClick(item)}
+                    className="group relative flex cursor-pointer items-center gap-3 overflow-hidden rounded-xl border border-theme bg-card p-4 shadow-sm transition-all duration-200  hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 transition-colors group-hover:bg-blue-500 group-hover:text-white">
+                      <Globe size={16} />
+                    </div>
+                    <div className="min-w-0">
+                      <span
+                        className="block truncate text-[13px] font-medium text-foreground"
+                        title={item.host}
+                      >
+                        {item.host}
+                      </span>
+                      <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                        <span>
+                          {Number(item.request_count).toLocaleString()} requests
+                        </span>
+                        <span>
+                          {Number(item.connected_ip_count).toLocaleString()}{" "}
+                          Connected IPs
+                        </span>
+                      </div>
+                      <div className="text-[11px] flex gap-3 mt-1 items-center text-muted-foreground">
+                        <span>
+                          {Number(item.pcap_ids.length).toLocaleString()} PCAP's
+                        </span>
+                        <span></span>
+                      </div>
+                    </div>
+                    <ChevronRight
+                      size={14}
+                      className="ml-auto shrink-0 -translate-x-1 text-slate-400 opacity-0 transition-all group-hover:translate-x-0 group-hover:opacity-100"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="mx-6 flex flex-col items-center gap-2 rounded-xl border border-dashed border-theme py-16 text-muted-foreground">
               <Search size={22} className="opacity-50" />
