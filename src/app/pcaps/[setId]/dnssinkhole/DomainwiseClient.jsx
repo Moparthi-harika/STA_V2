@@ -296,22 +296,22 @@ export default function DomainwiseClient({ dnsData, session }) {
                       }
                     }}
                     onClick={() => handleDomainClick(item)}
-                    className="group relative flex min-h-[180px] cursor-pointer flex-col items-center gap-3 overflow-hidden rounded-xl border border-blue-100 p-4 shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-500 hover:shadow-lg hover:shadow-blue-100"
+                    className="group relative flex min-h-[180px] cursor-pointer flex-col items-center gap-3 overflow-hidden rounded-xl border border-blue-300 p-4 shadow-md shadow-blue-200 transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-600 hover:shadow-lg hover:shadow-blue-200"
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <span
-                        className="min-w-0 truncate text-[14px] font-semibold tracking-tight text-foreground"
+                        className="min-w-0 truncate text-[16px] font-semibold tracking-tight text-foreground"
                         title={item.host}
                       >
                         {item.host}
                       </span>
                     </div>
-                    <div className="w-full mt-2 px-2">
+                    <div className="w-full mt-2 px-4">
                       <div className="grid w-full grid-cols-2 text-[16px] gap-8 text-muted-foreground">
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-3">
                           <Activity size={16} className="text-emerald-500" />
 
-                          <div className="flex flex-col">
+                          <div className="flex flex-col ">
                             <span className="text-foreground font-bold">
                               {Number(item.request_count).toLocaleString()}
                             </span>
@@ -321,7 +321,7 @@ export default function DomainwiseClient({ dnsData, session }) {
                           </div>
                         </span>
 
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-3">
                           <Hash size={16} className="text-violet-500" />
                           <div className="flex flex-col">
                             <span className="text-foreground font-bold">
@@ -334,7 +334,7 @@ export default function DomainwiseClient({ dnsData, session }) {
                         </span>
                       </div>
                       <div className="mt-8 flex w-full items-center text-[16px] text-muted-foreground">
-                        <span className="flex items-center gap-1.5">
+                        <span className="flex items-center gap-3">
                           <FileText size={16} className="text-orange-500" />
                           <div className="flex flex-col">
                             <span className="text-foreground font-bold">
