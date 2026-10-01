@@ -446,7 +446,7 @@ export default function DomainwiseClient({ dnsData, session }) {
             </div>
 
             {/* CONTENT */}
-            <div className="mt-1 flex-1 min-h-0 rounded-xl border border-theme bg-card p-4">
+           <div className="mt-1 flex-1 min-h-0 overflow-y-auto overflow-x-hidden rounded-xl border border-theme bg-card p-4">
               {activeTab === "Map" && (
                 <DomainMap
                   selectedDomain={selectedDomain}
